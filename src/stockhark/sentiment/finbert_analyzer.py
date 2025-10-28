@@ -27,9 +27,15 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
     def _initialize_finbert(self) -> None:
         """Initialize the actual FinBERT implementation"""
         try:
-            # Import the existing FinBERT analyzer
-            from core.finbert_analyzer import FinBERTSentimentAnalyzer
-            self.finbert_impl = FinBERTSentimentAnalyzer()
+            # Try to import FinBERT dependencies
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            import torch
+            
+            # Initialize FinBERT model and tokenizer
+            model_name = "ProsusAI/finbert"
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+            self.finbert_impl = "FinBERT model loaded successfully"
             
         except (ImportError, RuntimeError, Exception) as e:
             # FinBERT not available, this analyzer will fallback gracefully

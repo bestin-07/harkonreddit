@@ -70,18 +70,18 @@ class SentimentAnalyzerFactory:
                 try:
                     analyzer = FinBERTAnalyzer()
                     if analyzer.is_available():
-                        print("✅ Using FinBERT sentiment analyzer")
+                        print("[INFO] Using FinBERT sentiment analyzer")
                     else:
                         raise RuntimeError("FinBERT not properly initialized")
                 except Exception as e:
                     if fallback_to_rules:
-                        print(f"⚠️ FinBERT unavailable, using rule-based analyzer: {e}")
+                        print(f"[WARNING] FinBERT unavailable, using rule-based analyzer: {e}")
                         analyzer = RuleBasedAnalyzer()
                     else:
                         raise RuntimeError(f"Auto-selection failed: {e}")
             else:
                 analyzer = RuleBasedAnalyzer()
-                print("✅ Using rule-based sentiment analyzer")
+                print("[INFO] Using rule-based sentiment analyzer")
         
         else:
             raise ValueError(f"Unknown analyzer type: {analyzer_type}")

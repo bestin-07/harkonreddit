@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any, List, Optional, Union
 import time
 
-from core.sentiment import create_enhanced_analyzer, BaseSentimentAnalyzer
+from sentiment import create_enhanced_analyzer, BaseSentimentAnalyzer
 from core.service_factory import ServiceFactory
 
 # Configure logging
@@ -49,11 +49,11 @@ class EnhancedSentimentAnalyzer:
             self._initialization_time = time.time() - start_time
             
             analyzer_type = type(self._analyzer).__name__
-            logger.info(f"✅ Enhanced sentiment analyzer initialized with {analyzer_type} "
+            logger.info(f"[SUCCESS] Enhanced sentiment analyzer initialized with {analyzer_type} "
                        f"in {self._initialization_time:.2f}s")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize sentiment analyzer: {e}")
+            logger.error(f"[ERROR] Failed to initialize sentiment analyzer: {e}")
             raise
     
     @property

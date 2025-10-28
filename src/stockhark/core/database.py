@@ -10,7 +10,10 @@ import os
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from typing import List, Dict, Optional, Any, Tuple
-from ..config import DATABASE_PATH
+try:
+    from ..config import DATABASE_PATH
+except ImportError:
+    from config import DATABASE_PATH
 
 # Database configuration
 DATABASE_FILE = str(DATABASE_PATH)
