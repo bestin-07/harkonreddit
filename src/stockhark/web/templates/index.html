@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Top Stocks - Reddit Stock Monitor{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            <i class="fas fa-rocket"></i>
+            Hot Stocks on Reddit
+        </h1>
+        <p class="hero-subtitle">
+            Real-time sentiment analysis from Reddit's top financial communities
+        </p>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <i class="fas fa-comments"></i>
+                <span>Live Monitoring</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-brain"></i>
+                <span>AI Sentiment</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-bell"></i>
+                <span>Instant Alerts</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section-header">
+        <h2>
+            <i class="fas fa-fire"></i>
+            Top 10 Trending Stocks
+        </h2>
+        <div class="section-controls">
+            <div class="time-filter">
+                <button class="filter-btn active" data-hours="1">1H</button>
+                <button class="filter-btn" data-hours="6">6H</button>
+                <button class="filter-btn" data-hours="24">24H</button>
+            </div>
+            <div class="last-updated">
+                Last updated: <span id="last-updated-time">{{ now.strftime('%H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if stocks %}
+        <div class="stocks-grid">
+            {% for stock in stocks %}
+                <div class="stock-card" data-symbol="{{ stock.symbol }}">
+                    <div class="stock-header">
+                        <div class="stock-symbol">
+                            <h3>${{ stock.symbol }}</h3>
+                            <div class="stock-badges">
+                                <span class="mentions-badge">
+                                    <i class="fas fa-comment"></i>
+                                    {{ stock.mentions }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="sentiment-indicator sentiment-{{ stock.overall_sentiment }}">
+                            <i class="fas fa-{{ 'arrow-up' if stock.overall_sentiment == 'bullish' else 'arrow-down' if stock.overall_sentiment == 'bearish' else 'minus' }}"></i>
+                            <span>{{ stock.overall_sentiment.title() }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Sentiment Score</span>
+                            <span class="metric-value sentiment-score sentiment-{{ stock.overall_sentiment }}">
+                                {{ "%.3f"|format(stock.avg_sentiment) }}
+                            </span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Unique Posts</span>
+                            <span class="metric-value">{{ stock.unique_posts }}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Confidence</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: {{ (stock.sentiment_strength * 100)|round }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-footer">
+                        <div class="last-mention">
+                            <i class="fas fa-clock"></i>
+                            Latest: {{ stock.latest_mention }}
+                        </div>
+                        <button class="view-details-btn" onclick="viewStockDetails('{{ stock.symbol }}')">
+                            <i class="fas fa-external-link-alt"></i>
+                            Details
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>No Stock Data Available</h3>
+            <p>We're currently collecting data from Reddit. Check back in a few minutes!</p>
+            <button class="refresh-btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh Data
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<div class="cta-section">
+    <div class="cta-content">
+        <h2>Never Miss Hot Stocks Again</h2>
+        <p>Get instant email alerts when stocks start trending on Reddit</p>
+        <a href="{{ url_for('subscribe') }}" class="cta-button">
+            <i class="fas fa-bell"></i>
+            Set Up Alerts
+        </a>
+    </div>
+</div>
+
+<!-- Stock Details Modal -->
+<div id="stock-details-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('stock-details-modal')">&times;</span>
+        <div id="stock-details-content">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh data every 5 minutes
+setInterval(function() {
+    refreshData(true); // Silent refresh
+}, 300000);
+
+// Update timestamps every minute
+setInterval(function() {
+    updateTimestamps();
+}, 60000);
+
+function updateTimestamps() {
+    document.getElementById('last-updated-time').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+function viewStockDetails(symbol) {
+    showModal('stock-details-modal');
+    
+    // Show loading state
+    document.getElementById('stock-details-content').innerHTML = `
+        <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h2>Loading ${symbol} Details...</h2>
+            <p>Fetching data from /api/stock/${symbol}...</p>
+        </div>
+    `;
+    
+    console.log(`Fetching details for stock: ${symbol}`);
+    
+    // Fetch real stock data
+    fetch(`/api/stock/${symbol}`)
+        .then(response => {
+            console.log(`API Response status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Stock details received:', data);
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            const info = data.basic_info;
+            const sentimentClass = info.overall_sentiment;
+            const sentimentIcon = info.overall_sentiment === 'bullish' ? 'arrow-up' : 
+                                info.overall_sentiment === 'bearish' ? 'arrow-down' : 'minus';
+            
+            document.getElementById('stock-details-content').innerHTML = `
+                <div class="stock-details-header">
+                    <h2>
+                        $${data.symbol} 
+                        <span class="sentiment-badge sentiment-${sentimentClass}">
+                            <i class="fas fa-${sentimentIcon}"></i>
+                            ${info.overall_sentiment.toUpperCase()}
+                        </span>
+                    </h2>
+                    <div class="stock-meta">
+                        <span><i class="fas fa-calendar"></i> Active since ${new Date(info.first_mention).toLocaleDateString()}</span>
+                        <span><i class="fas fa-clock"></i> Last seen ${formatTimeAgo(info.last_mention)}</span>
+                    </div>
+                </div>
+
+                <div class="details-metrics">
+                    <div class="metric-card">
+                        <h3><i class="fas fa-comments"></i> Total Mentions</h3>
+                        <div class="metric-number">${info.mentions}</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3><i class="fas fa-brain"></i> Avg Sentiment</h3>
+                        <div class="metric-number sentiment-${sentimentClass}">${info.avg_sentiment >= 0 ? '+' : ''}${info.avg_sentiment}</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3><i class="fas fa-chart-pie"></i> Sentiment Breakdown</h3>
+                        <div class="sentiment-breakdown">
+                            <div class="sentiment-bar">
+                                <div class="bullish" style="width: ${(info.bullish/info.mentions*100).toFixed(1)}%">${info.bullish}</div>
+                                <div class="neutral" style="width: ${(info.neutral/info.mentions*100).toFixed(1)}%">${info.neutral}</div>
+                                <div class="bearish" style="width: ${(info.bearish/info.mentions*100).toFixed(1)}%">${info.bearish}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-section">
+                    <h3><i class="fas fa-history"></i> Recent Mentions</h3>
+                    <div class="mentions-list">
+                        ${data.recent_mentions.map(mention => `
+                            <div class="mention-item">
+                                <div class="mention-header">
+                                    <span class="mention-source">${mention.source.replace('reddit/r/', 'r/')}</span>
+                                    <span class="mention-time">${formatTimeAgo(mention.timestamp)}</span>
+                                    <span class="mention-sentiment sentiment-${mention.sentiment_label}">
+                                        ${mention.sentiment >= 0 ? '+' : ''}${mention.sentiment}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                ${data.top_sources.length > 0 ? `
+                <div class="details-section">
+                    <h3><i class="fas fa-reddit"></i> Top Sources</h3>
+                    <div class="sources-list">
+                        ${data.top_sources.map(source => `
+                            <div class="source-item">
+                                <span class="source-name">${source.source.replace('reddit/r/', 'r/')}</span>
+                                <span class="source-mentions">${source.mentions} mentions</span>
+                                <span class="source-sentiment sentiment-${source.avg_sentiment > 0.1 ? 'bullish' : source.avg_sentiment < -0.1 ? 'bearish' : 'neutral'}">
+                                    ${source.avg_sentiment >= 0 ? '+' : ''}${source.avg_sentiment}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        })
+        .catch(error => {
+            console.error('Error fetching stock details:', error);
+            document.getElementById('stock-details-content').innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h2>Error Loading ${symbol}</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>API Endpoint:</strong> /api/stock/${symbol}</p>
+                    <div class="error-details">
+                        <p>Possible causes:</p>
+                        <ul>
+                            <li>Flask app not running</li>
+                            <li>Stock ${symbol} not found in database</li>
+                            <li>Database connection issue</li>
+                            <li>API endpoint error</li>
+                        </ul>
+                    </div>
+                    <button onclick="viewStockDetails('${symbol}')" class="retry-btn">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                    <button onclick="checkApiStatus()" class="debug-btn">
+                        <i class="fas fa-bug"></i> Check API Status
+                    </button>
+                </div>
+            `;
+        });
+}
+
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMinutes = Math.floor((now - time) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+    return `${Math.floor(diffMinutes / 1440)}d ago`;
+}
+
+function checkApiStatus() {
+    console.log('Checking API status...');
+    
+    // Test basic API endpoints
+    Promise.all([
+        fetch('/api/stocks').then(r => ({endpoint: '/api/stocks', status: r.status, ok: r.ok})),
+        fetch('/api/status').then(r => ({endpoint: '/api/status', status: r.status, ok: r.ok}))
+    ]).then(results => {
+        console.log('API Status Results:', results);
+        
+        const statusHtml = results.map(result => 
+            `<li>${result.endpoint}: ${result.ok ? '✅' : '❌'} ${result.status}</li>`
+        ).join('');
+        
+        document.getElementById('stock-details-content').innerHTML = `
+            <div class="debug-info">
+                <h2><i class="fas fa-bug"></i> API Status Check</h2>
+                <ul>${statusHtml}</ul>
+                <button onclick="testStockApi()" class="debug-btn">Test Stock API</button>
+                <button onclick="closeModal('stock-details-modal')" class="close-btn">Close</button>
+            </div>
+        `;
+    }).catch(error => {
+        console.error('API status check failed:', error);
+        document.getElementById('stock-details-content').innerHTML = `
+            <div class="error-state">
+                <h2>API Connection Failed</h2>
+                <p>Cannot connect to Flask server. Make sure the app is running:</p>
+                <code>python app.py</code>
+                <button onclick="closeModal('stock-details-modal')" class="close-btn">Close</button>
+            </div>
+        `;
+    });
+}
+
+function testStockApi() {
+    // Test with a known stock from the database
+    const testStocks = ['BYND', 'CAN', 'ANY', 'TECH', 'META', 'NVDA'];
+    
+    console.log('Testing stock API with known symbols...');
+    
+    let testHtml = '<h3>Stock API Tests:</h3><ul>';
+    
+    Promise.all(testStocks.map(symbol => 
+        fetch(`/api/stock/${symbol}`)
+            .then(r => r.json())
+            .then(data => ({symbol, success: true, data}))
+            .catch(error => ({symbol, success: false, error: error.message}))
+    )).then(results => {
+        results.forEach(result => {
+            if (result.success) {
+                testHtml += `<li>✅ ${result.symbol}: ${result.data.basic_info?.mentions || 0} mentions</li>`;
+            } else {
+                testHtml += `<li>❌ ${result.symbol}: ${result.error}</li>`;
+            }
+        });
+        
+        testHtml += '</ul>';
+        
+        document.getElementById('stock-details-content').innerHTML = `
+            <div class="debug-info">
+                <h2>Stock API Test Results</h2>
+                ${testHtml}
+                <button onclick="closeModal('stock-details-modal')" class="close-btn">Close</button>
+            </div>
+        `;
+    });
+}
+</script>
+{% endblock %}

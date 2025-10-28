@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Alert - StockHark</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            color: #1a202c;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .email-header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+        }
+        .email-body {
+            padding: 30px 20px;
+        }
+        .alert-intro {
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .stock-alert {
+            background-color: #f7fafc;
+            border-left: 4px solid #4299e1;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stock-symbol {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .stock-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .metric {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .metric-icon {
+            width: 16px;
+            height: 16px;
+        }
+        .sentiment-bullish {
+            color: #38a169;
+            font-weight: 600;
+        }
+        .sentiment-bearish {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+        .sentiment-neutral {
+            color: #718096;
+            font-weight: 600;
+        }
+        .mentions-count {
+            background-color: #edf2f7;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .email-footer {
+            background-color: #f7fafc;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #718096;
+        }
+        .email-footer a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+        .cta-section {
+            background-color: #4299e1;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #ffffff;
+            color: #4299e1;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .disclaimer {
+            background-color: #fed7d7;
+            border: 1px solid #fc8181;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>🚀 Stock Alert: Hot Stocks Detected!</h1>
+            <p>{{ stocks|length }} stocks are trending on Reddit right now</p>
+        </div>
+        
+        <div class="email-body">
+            <div class="alert-intro">
+                <strong>Hey there!</strong><br>
+                We've detected some hot stock activity on Reddit that matches your alert criteria. Here are the stocks that are currently trending:
+            </div>
+            
+            {% for stock in stocks %}
+            <div class="stock-alert">
+                <div class="stock-symbol">${{ stock.symbol }}</div>
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <span>📈</span>
+                        <span class="sentiment-{{ stock.overall_sentiment }}">
+                            {{ stock.overall_sentiment.upper() }}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span>💬</span>
+                        <span class="mentions-count">{{ stock.mentions }} mentions</span>
+                    </div>
+                    <div class="metric">
+                        <span>🎯</span>
+                        <span>Score: {{ "%.2f"|format(stock.avg_sentiment) }}</span>
+                    </div>
+                </div>
+                <div style="font-size: 14px; color: #718096;">
+                    <strong>{{ stock.unique_posts }}</strong> unique posts • 
+                    Last mentioned: {{ stock.latest_mention }}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="cta-section">
+                <div style="color: white; margin-bottom: 10px;">
+                    <strong>Want to see more details?</strong>
+                </div>
+                <a href="https://your-domain.com" class="cta-button">
+                    View Full Dashboard
+                </a>
+            </div>
+            
+            <div class="disclaimer">
+                <strong>⚠️ Important Disclaimer:</strong> This information is for educational purposes only and should not be considered as financial advice. Always do your own research and consult with a qualified financial advisor before making investment decisions.
+            </div>
+        </div>
+        
+        <div class="email-footer">
+            <p>
+                You're receiving this email because you subscribed to StockHark alerts.<br>
+                <a href="#">Unsubscribe</a> | <a href="#">Update Preferences</a> | <a href="#">View in Browser</a>
+            </p>
+            <p style="margin-top: 15px;">
+                StockHark - Monitoring Reddit for Stock Sentiment<br>
+                © 2024 All rights reserved
+            </p>
+        </div>
+    </div>
+</body>
+</html>

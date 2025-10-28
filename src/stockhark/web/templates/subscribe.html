@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Email Alerts - Reddit Stock Monitor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="subscribe-section">
+        <div class="subscribe-header">
+            <h1>
+                <i class="fas fa-bell"></i>
+                Get Stock Alerts
+            </h1>
+            <p class="subscribe-subtitle">
+                Never miss hot stocks trending on Reddit. Get instant email alerts when stocks gain momentum.
+            </p>
+        </div>
+
+        <div class="subscribe-card">
+            <div class="subscribe-form-section">
+                <h2>Setup Your Alerts</h2>
+                <form method="POST" class="subscribe-form">
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i>
+                            Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="your.email@example.com"
+                            required
+                        >
+                    </div>
+                    
+                    <button type="submit" class="subscribe-btn">
+                        <i class="fas fa-bell"></i>
+                        Subscribe to Alerts
+                    </button>
+                </form>
+                
+                <div class="subscribe-info">
+                    <h3>What you'll get:</h3>
+                    <ul class="benefits-list">
+                        <li>
+                            <i class="fas fa-rocket"></i>
+                            <span>Instant alerts when stocks trend</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-brain"></i>
+                            <span>AI-powered sentiment analysis</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-chart-line"></i>
+                            <span>Bullish/Bearish indicators</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-clock"></i>
+                            <span>Real-time monitoring</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="alert-preview-section">
+                <h3>Sample Alert</h3>
+                <div class="email-preview">
+                    <div class="email-header">
+                        <strong>🔥 Stock Alert: Hot Stocks Detected!</strong>
+                    </div>
+                    <div class="email-body">
+                        <div class="stock-alert-item">
+                            <div class="alert-stock-symbol">$GME</div>
+                            <div class="alert-details">
+                                <div class="alert-sentiment bullish">
+                                    <i class="fas fa-arrow-up"></i> BULLISH
+                                </div>
+                                <div class="alert-mentions">47 mentions in 1 hour</div>
+                                <div class="alert-score">Sentiment: +0.85</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stock-alert-item">
+                            <div class="alert-stock-symbol">$TSLA</div>
+                            <div class="alert-details">
+                                <div class="alert-sentiment bearish">
+                                    <i class="fas fa-arrow-down"></i> BEARISH
+                                </div>
+                                <div class="alert-mentions">23 mentions in 1 hour</div>
+                                <div class="alert-score">Sentiment: -0.73</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert-settings">
+            <h2>Alert Criteria</h2>
+            <div class="criteria-grid">
+                <div class="criteria-item">
+                    <div class="criteria-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <h3>High Activity</h3>
+                    <p>Stocks with 10+ mentions in 1 hour</p>
+                </div>
+                
+                <div class="criteria-item">
+                    <div class="criteria-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Strong Sentiment</h3>
+                    <p>Sentiment score above ±0.3</p>
+                </div>
+                
+                <div class="criteria-item">
+                    <div class="criteria-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Multiple Sources</h3>
+                    <p>Mentions across different subreddits</p>
+                </div>
+                
+                <div class="criteria-item">
+                    <div class="criteria-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Real-time</h3>
+                    <p>Alerts sent within minutes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="privacy-section">
+    <div class="container">
+        <div class="privacy-content">
+            <h3>Privacy & Unsubscribe</h3>
+            <p>
+                <i class="fas fa-shield-alt"></i>
+                Your email is safe with us. We only send stock alerts and never share your information.
+                You can unsubscribe at any time by clicking the link in any email.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

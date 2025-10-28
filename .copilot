@@ -1,0 +1,190 @@
+# Reddit Stock Sentiment Monitor - Copilot Instructions
+
+## Project Overview
+This is a Flask web application that monitors Reddit for stock sentiment analysis and sends email alerts. The app tracks hot stocks mentioned in financial subreddits and analyzes whether the sentiment is bullish or bearish.
+
+## Key Features
+- Real-time Reddit monitoring using PRAW (Python Reddit API Wrapper)
+- AI-powered sentiment analysis with TextBlob and NLTK
+- Email alert system for trending stocks
+- Modern, minimalistic web interface
+- SQLite database for data persistence
+- RESTful API endpoints
+
+## Project Structure
+```
+Reddit Hark/
+├── app.py                 # Main Flask application
+├── config.py             # Configuration settings
+├── database.py           # Database operations
+├── reddit_monitor.py     # Reddit API integration
+├── sentiment_analyzer.py # Sentiment analysis logic
+├── requirements.txt      # Python dependencies
+├── templates/            # HTML templates
+│   ├── base.html        # Base template
+│   ├── index.html       # Homepage
+│   ├── subscribe.html   # Email subscription
+│   └── email_alert.html # Email template
+└── static/              # CSS, JS, images
+    ├── css/style.css    # Main stylesheet
+    └── js/main.js       # Frontend JavaScript
+```
+
+## Technology Stack
+- **Backend**: Flask, Python 3.8+
+- **Database**: SQLite
+- **Reddit API**: PRAW (Python Reddit API Wrapper)
+- **Sentiment Analysis**: TextBlob, NLTK
+- **Email**: Flask-Mail
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
+- **Deployment**: PythonAnywhere
+
+## Key Components
+
+### Reddit Monitoring (`reddit_monitor.py`)
+- Monitors subreddits: r/wallstreetbets, r/stocks, r/investing, r/SecurityAnalysis
+- Extracts hot posts and comments
+- Filters out stickied posts
+- Returns structured data with metadata
+
+### Sentiment Analysis (`sentiment_analyzer.py`)
+- Extracts stock symbols from text using regex
+- Analyzes sentiment using TextBlob + custom keyword analysis
+- Bullish keywords: buy, long, moon, rocket, etc.
+- Bearish keywords: sell, short, crash, dump, etc.
+- Returns sentiment score (-1 to 1) and label
+
+### Database (`database.py`)
+- SQLite database with two main tables:
+  - `subscribers`: Email addresses for alerts
+  - `stock_data`: Stock mentions, sentiment, timestamps
+- Context manager for safe database operations
+- Aggregation functions for top stocks
+
+### Email System
+- Flask-Mail integration for SMTP
+- HTML email templates with styling
+- Configurable alert thresholds
+- Unsubscribe functionality
+
+## Configuration
+
+### Environment Variables
+Set these in your environment or .env file:
+```
+SECRET_KEY=your-secret-key-here
+REDDIT_CLIENT_ID=your-reddit-client-id
+REDDIT_CLIENT_SECRET=your-reddit-client-secret
+REDDIT_USER_AGENT=StockMonitor/1.0
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER=your-email@gmail.com
+```
+
+### Reddit API Setup
+1. Go to https://www.reddit.com/prefs/apps
+2. Create a new application (script type)
+3. Note down client ID and secret
+4. Set user agent as "StockMonitor/1.0"
+
+### Email Setup (Gmail)
+1. Enable 2-factor authentication
+2. Generate app-specific password
+3. Use this password in MAIL_PASSWORD
+
+## Design Principles
+
+### Color Theory
+- Primary: #667eea (Modern blue-purple)
+- Secondary: #764ba2 (Complementary purple)
+- Success/Bullish: #38a169 (Green)
+- Error/Bearish: #e53e3e (Red)
+- Neutral: #718096 (Gray)
+- Background: #f7fafc (Light gray)
+
+### UI/UX
+- Minimalistic design with plenty of white space
+- Card-based layout for stock information
+- Responsive grid system
+- Smooth animations and transitions
+- Accessible color contrasts
+- Mobile-first approach
+
+## Development Guidelines
+
+### Code Style
+- Follow PEP 8 for Python code
+- Use descriptive variable names
+- Add docstrings to all functions
+- Handle exceptions gracefully
+- Use context managers for database operations
+
+### Testing
+- Test Reddit API integration with mock data
+- Validate sentiment analysis accuracy
+- Test email functionality
+- Cross-browser compatibility
+- Mobile responsiveness
+
+### Performance
+- Implement caching for Reddit data
+- Optimize database queries
+- Minimize API calls
+- Use background tasks for monitoring
+- Implement rate limiting
+
+## Deployment Notes
+
+### PythonAnywhere
+- Upload files via Files tab
+- Install requirements in Bash console
+- Configure WSGI file
+- Set environment variables
+- Schedule tasks for monitoring
+
+### Security
+- Never commit API keys to version control
+- Use environment variables for secrets
+- Implement CSRF protection
+- Validate all user inputs
+- Use HTTPS in production
+
+## Common Issues & Solutions
+
+### Reddit API
+- Rate limiting: Implement delays between requests
+- Authentication errors: Check credentials and user agent
+- Subreddit access: Some subreddits may be private
+
+### Sentiment Analysis
+- False positives: Refine stock symbol extraction regex
+- Context sensitivity: Improve keyword analysis
+- Performance: Cache sentiment models
+
+### Email Delivery
+- Spam filters: Use proper email headers and content
+- Rate limiting: Batch email sends
+- Bounce handling: Implement unsubscribe mechanism
+
+## Future Enhancements
+- Integration with stock price APIs
+- Historical sentiment tracking
+- User dashboard with personalized alerts
+- Social media expansion (Twitter, Discord)
+- Machine learning sentiment models
+- Real-time WebSocket updates
+
+## Support
+For development questions or issues:
+1. Check error logs in the application
+2. Verify API credentials and rate limits
+3. Test individual components separately
+4. Use debugging mode for development
+5. Use .vev to run python files
+
+---
+
+This configuration file helps GitHub Copilot understand the project structure and provide better code suggestions and assistance throughout development.

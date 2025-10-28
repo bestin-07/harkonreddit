@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Reddit Stock Monitor{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-chart-line"></i>
+                <span>StockHark</span>
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('subscribe') }}" class="nav-link">
+                    <i class="fas fa-bell"></i> Alerts
+                </a>
+                <button class="refresh-btn" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">
+                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}"></i>
+                            {{ message }}
+                            <button class="flash-close" onclick="this.parentElement.remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 StockHark. Monitoring Reddit for stock sentiment.</p>
+            <div class="footer-links">
+                <a href="#" onclick="showAbout()">About</a>
+                <a href="#" onclick="showDisclaimer()">Disclaimer</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-chart-line fa-spin"></i>
+            <p>Refreshing stock data...</p>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('about-modal')">&times;</span>
+            <h2>About StockHark</h2>
+            <p>StockHark monitors Reddit communities for stock mentions and sentiment analysis. It helps you stay informed about trending stocks and market sentiment.</p>
+            <p><strong>Features:</strong></p>
+            <ul>
+                <li>Real-time Reddit monitoring</li>
+                <li>Sentiment analysis</li>
+                <li>Email alerts for hot stocks</li>
+                <li>Clean, minimalistic interface</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="disclaimer-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('disclaimer-modal')">&times;</span>
+            <h2>Disclaimer</h2>
+            <p><strong>This is not financial advice.</strong></p>
+            <p>The information provided by StockHark is for informational purposes only. It should not be considered as financial advice or a recommendation to buy or sell any securities.</p>
+            <p>Always do your own research and consult with a qualified financial advisor before making investment decisions.</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
