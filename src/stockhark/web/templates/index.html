@@ -106,10 +106,6 @@
             </div>
             <h3>No Stock Data Available</h3>
             <p>We're currently collecting data from Reddit. Check back in a few minutes!</p>
-            <button class="refresh-btn" onclick="refreshData()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh Data
-            </button>
         </div>
     {% endif %}
 </div>
@@ -136,11 +132,6 @@
 </div>
 
 <script>
-// Auto-refresh data every 5 minutes
-setInterval(function() {
-    refreshData(true); // Silent refresh
-}, 300000);
-
 // Update timestamps every minute
 setInterval(function() {
     updateTimestamps();

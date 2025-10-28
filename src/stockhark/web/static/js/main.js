@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     // Initialize event listeners
     setupTimeFilters();
-    setupAutoRefresh();
     setupModalHandlers();
     
     // Start periodic updates
@@ -29,18 +28,10 @@ function setupTimeFilters() {
             // Get selected time period
             const hours = this.getAttribute('data-hours');
             
-            // Refresh data with new filter
-            refreshDataWithFilter(hours);
+            // Update data with new filter
+            updateDataWithFilter(hours);
         });
     });
-}
-
-// Auto-refresh functionality
-function setupAutoRefresh() {
-    // Auto-refresh every 5 minutes
-    setInterval(() => {
-        refreshData(true); // Silent refresh
-    }, 300000);
 }
 
 // Modal handlers
@@ -65,40 +56,8 @@ function setupModalHandlers() {
     });
 }
 
-// Refresh data functionality
-function refreshData(silent = false) {
-    if (!silent) {
-        showLoadingOverlay();
-    }
-    
-    fetch('/api/refresh')
-        .then(response => response.json())
-        .then(data => {
-            if (!silent) {
-                // Show success message
-                showFlashMessage('Data refreshed successfully!', 'success');
-                
-                // Reload the page to show new data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            }
-        })
-        .catch(error => {
-            console.error('Error refreshing data:', error);
-            if (!silent) {
-                showFlashMessage('Error refreshing data. Please try again.', 'error');
-            }
-        })
-        .finally(() => {
-            if (!silent) {
-                hideLoadingOverlay();
-            }
-        });
-}
-
-// Refresh data with time filter
-function refreshDataWithFilter(hours) {
+// Update data with time filter
+function updateDataWithFilter(hours) {
     showLoadingOverlay();
     
     fetch(`/api/stocks?hours=${hours}`)
@@ -693,12 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Add keyboard shortcuts
 document.addEventListener('keydown', function(event) {
-    // Ctrl/Cmd + R to refresh data
-    if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
-        event.preventDefault();
-        refreshData();
-    }
-    
     // Escape to close modals
     if (event.key === 'Escape') {
         closeAllModals();

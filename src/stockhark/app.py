@@ -14,8 +14,10 @@ except ImportError:
     pass  # dotenv is optional
 
 from .monitoring.reddit_client import RedditMonitor
-from .core.validator import OptimizedSentimentAnalyzer
-from .core.database import init_db, add_subscriber, get_subscribers, add_stock_data, get_top_stocks
+from .core.enhanced_sentiment import EnhancedSentimentAnalyzer
+from .core.validator import StockValidator
+from .core.database import init_db, add_subscriber, get_active_subscribers, add_stock_data, get_top_stocks
+from .core.background_collector import start_background_collection, stop_background_collection, get_collection_status
 
 app = Flask(__name__, 
            template_folder='web/templates',
@@ -29,7 +31,13 @@ init_db()
 
 # Initialize monitoring services
 reddit_monitor = RedditMonitor()
-sentiment_analyzer = OptimizedSentimentAnalyzer()  # Ultra-fast validation with JSON files
+sentiment_analyzer = EnhancedSentimentAnalyzer(enable_finbert=False)  # Start with rule-based, load FinBERT on demand
+stock_validator = StockValidator(silent=True)  # Fast stock symbol validation
+
+# Start background data collection
+print("🔄 Starting background data collection...")
+start_background_collection()
+print("✅ Background data collection started")
 
 # Template context processor to make datetime available in templates
 @app.context_processor
@@ -40,10 +48,15 @@ def inject_now():
 def index():
     """Main landing page showing top 10 hot stocks"""
     try:
-        top_stocks = get_top_stocks(limit=10)
+        # Use 30-day window to capture historical data
+        print(f"DEBUG: Calling get_top_stocks(limit=10, hours=720)")
+        top_stocks = get_top_stocks(limit=10, hours=720)
+        print(f"DEBUG: Got {len(top_stocks)} stocks for index")
         return render_template('index.html', stocks=top_stocks)
     except Exception as e:
         print(f"Error loading index: {e}")
+        import traceback
+        traceback.print_exc()
         return render_template('index.html', stocks=[])
 
 @app.route('/subscribe', methods=['GET', 'POST'])
@@ -68,13 +81,59 @@ def methodology():
     """Sentiment analysis methodology explanation page"""
     return render_template('sentiment_methodology.html')
 
+@app.route('/api/status')
+def api_status():
+    """API status and background collection status"""
+    try:
+        from .core.database import get_database_stats
+        
+        # Get database stats
+        db_stats = get_database_stats()
+        
+        # Get background collection status
+        collection_status = get_collection_status()
+        
+        return jsonify({
+            'status': 'success',
+            'database': db_stats,
+            'background_collection': collection_status,
+            'api_version': '1.0'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/test')
+def api_test():
+    """Test API endpoint"""
+    try:
+        stocks = get_top_stocks(limit=5, hours=720)
+        return jsonify({
+            'status': 'success',
+            'count': len(stocks),
+            'first_stock': stocks[0] if stocks else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/stocks')
 def api_stocks():
     """API endpoint for stock data"""
     try:
-        stocks = get_top_stocks(limit=20)
+        # Use 30-day window to capture historical data
+        print(f"DEBUG: Calling get_top_stocks(limit=20, hours=720)")
+        stocks = get_top_stocks(limit=20, hours=720)
+        print(f"DEBUG: Got {len(stocks)} stocks")
+        if len(stocks) == 0:
+            print("DEBUG: No stocks returned - this is the problem!")
+            # Try direct database query to debug
+            from .core.database import get_database_stats
+            stats = get_database_stats()
+            print(f"DEBUG: Database stats: {stats}")
         return jsonify(stocks)
     except Exception as e:
+        print(f"DEBUG: Error in api_stocks: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stock/<symbol>')
@@ -208,52 +267,22 @@ def api_refresh():
 
 @app.route('/api/collect-real-data')
 def api_collect_real_data():
-    """Trigger real data collection (5-minute quick collection)"""
+    """Trigger manual data collection using background collector"""
     try:
-        def quick_collection():
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
-            from collect_data import collect_real_data
-            collect_real_data(duration_minutes=5, max_posts_per_category=15)
+        # Trigger immediate collection via background collector
+        from .core.background_collector import force_collection
+        force_collection()
         
-        # Run collection in background
+        # Run manual collection in background
+        def quick_collection():
+            from .core.background_collector import collect_stock_data
+            collect_stock_data(duration_minutes=5, posts_per_subreddit=15)
+        
         threading.Thread(target=quick_collection, daemon=True).start()
         return jsonify({
             'status': 'real data collection started',
             'duration': '5 minutes',
             'message': 'Check console for progress updates'
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/status')
-def api_status():
-    """Show system status and configuration"""
-    try:
-        from .core.database import get_database_stats
-        db_stats = get_database_stats()
-        
-        # Check if validation is enabled
-        validation_enabled = hasattr(sentiment_analyzer, 'fast_validator') and sentiment_analyzer.fast_validator is not None
-        
-        # Get subreddit stats
-        subreddit_stats = reddit_monitor.get_subreddit_stats()
-        
-        return jsonify({
-            'stock_validation': {
-                'enabled': validation_enabled,
-                'validator_type': 'fast_json_validator' if validation_enabled else None,
-                'symbols_loaded': len(sentiment_analyzer.fast_validator.all_symbols) if validation_enabled else 0,
-                'speed': '0.00ms per symbol'
-            },
-            'database': db_stats,
-            'monitoring': {
-                'total_subreddits': subreddit_stats['total'],
-                'categories': len(subreddit_stats) - 1,  # -1 for 'total' key
-                'enhanced_monitoring': True
-            },
-            'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -283,18 +312,26 @@ def monitor_stocks():
                     if post.get('comments'):
                         full_text += ' ' + ' '.join(post['comments'][:2])  # Add top 2 comments
                     
-                    # Extract stocks with enhanced detection
-                    stocks_mentioned = sentiment_analyzer.extract_stock_symbols(full_text)
+                    # Extract and validate stocks
+                    stocks_mentioned = stock_validator.extract_and_validate(full_text)
                     
                     for stock in stocks_mentioned:
-                        # Use context-aware sentiment analysis
-                        sentiment = sentiment_analyzer.get_stock_context_sentiment(full_text, stock)
+                        # Use comprehensive sentiment analysis
+                        sentiment_result = sentiment_analyzer.analyze_post_comprehensive(
+                            full_text, 
+                            timestamp=post.get('created_utc')
+                        )
+                        
+                        # Get sentiment for this specific stock
+                        stock_sentiment = sentiment_result['stock_sentiments'].get(stock, 0.0)
+                        sentiment_label = 'bullish' if stock_sentiment > 0.1 else 'bearish' if stock_sentiment < -0.1 else 'neutral'
                         
                         # Store in database with enhanced metadata
                         add_stock_data(
                             symbol=stock,
-                            sentiment=sentiment['score'],
-                            sentiment_label=sentiment['label'],
+                            sentiment=stock_sentiment,
+                            sentiment_label=sentiment_label,
+                            confidence=sentiment_result['analysis']['confidence'],
                             mentions=1,
                             source=f"reddit/r/{post['subreddit']}",
                             post_url=post['url'],
@@ -333,7 +370,7 @@ def check_and_send_alerts():
                        if stock['mentions'] >= 10 and abs(stock['avg_sentiment']) >= 0.3]
         
         if alert_stocks:
-            subscribers = get_subscribers()
+            subscribers = get_active_subscribers()
             for subscriber in subscribers:
                 send_alert_email(subscriber['email'], alert_stocks)
                 
@@ -372,9 +409,38 @@ def run_periodic_monitoring():
         
         time.sleep(1200)  # 20 minutes
 
-if __name__ == '__main__':
-    # Start background monitoring
-    monitoring_thread = threading.Thread(target=run_periodic_monitoring, daemon=True)
-    monitoring_thread.start()
+def shutdown_background_services():
+    """Shutdown background services gracefully"""
+    print("🛑 Shutting down background services...")
+    stop_background_collection()
+    print("✅ Background services stopped")
+
+def create_app():
+    """Create and configure the Flask application"""
+    print("🚀 Initializing StockHark with Background Data Collection")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Initialize database
+    init_db()
+    
+    # Start background collection
+    start_background_collection()
+    
+    # Show startup info
+    from .core.database import get_database_stats
+    stats = get_database_stats()
+    print(f"📊 Database: {stats['total_mentions']} mentions, {stats['unique_stocks']} stocks")
+    print(f"🔄 Background collection active (30min intervals)")
+    
+    return app
+
+import atexit
+atexit.register(shutdown_background_services)
+
+if __name__ == '__main__':
+    try:
+        flask_app = create_app()
+        print(f"🌐 Starting server at http://127.0.0.1:5000")
+        flask_app.run(debug=False, host='0.0.0.0', port=5000)
+    except KeyboardInterrupt:
+        print("\n🛑 Shutting down StockHark...")
+        shutdown_background_services()
