@@ -1,20 +1,18 @@
-# 🚀 StockHark - Reddit Stock Sentiment Monitor
+# 🚀 StockHark - Reddit Stock Sentiment Analyzer
 
-A Flask web application that monitors Reddit for stock mentions and sentiment analysis, providing real-time alerts about trending stocks. Never miss the next GameStop or Tesla discussion again!
-
-![StockHark Logo](https://via.placeholder.com/800x200/667eea/white?text=StockHark+-+Reddit+Stock+Monitor)
+A modern Flask web application that monitors Reddit for stock mentions and performs AI-powered sentiment analysis with automated background data collection. Built with professional architecture and clean UI design.
 
 ## ✨ Features
 
-- **🌍 Global Market Coverage** - Monitors 67+ subreddits across US, European, and international markets
-- **💰 400+ Stock Symbols** - Tracks US, EU, UK, Asian markets and cryptocurrency
-- **🔥 Real-time Reddit Monitoring** - Advanced monitoring across 7 categories of financial subreddits
-- **🧠 Enhanced AI Sentiment Analysis** - Context-aware analysis with improved accuracy
-- **📧 Email Alerts** - Smart notifications for trending stocks with strong sentiment
-- **📊 Top 10 Global Dashboard** - Clean interface showing hottest stocks worldwide
-- **🎯 Regional Filtering** - Focus on specific markets (US, EU, Global)
-- **📱 Responsive Design** - Works perfectly on desktop, tablet, and mobile
-- **⚡ RESTful API** - Programmatic access to global stock sentiment data
+- **🤖 Background Data Collection** - Automated Reddit monitoring every 30 minutes using threading
+- **🧠 FinBERT AI Sentiment Analysis** - Advanced transformer-based financial sentiment analysis with fallback to rule-based methods
+- **📊 Professional Dashboard** - Clean, modern interface with real-time stock sentiment tracking
+- **� SQLite Database** - Efficient local storage with 1,500+ stock mentions and 200+ unique stocks
+- **🎯 Smart Stock Validation** - 4,200+ stock symbols with O(1) hash lookup validation
+- **� RESTful API** - Complete API endpoints for stock data, status monitoring, and system health
+- **🔄 No Refresh Needed** - Background updates eliminate manual refresh requirements
+- **📱 Responsive Design** - Mobile-first design with professional color scheme
+- **⚡ High Performance** - Optimized database queries and efficient data processing
 
 ## 🎯 Demo
 
@@ -24,79 +22,104 @@ A Flask web application that monitors Reddit for stock mentions and sentiment an
 
 ## 🛠 Technology Stack
 
-- **Backend**: Flask, Python 3.8+
-- **Database**: SQLite
-- **Reddit API**: PRAW (Python Reddit API Wrapper)
-- **Sentiment Analysis**: TextBlob, NLTK
-- **Email**: Flask-Mail
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Deployment**: PythonAnywhere
+- **Backend**: Flask with modular architecture, Python 3.8+
+- **Database**: SQLite with optimized schema and indexing
+- **Reddit API**: PRAW (Python Reddit API Wrapper) with direct authentication
+- **AI/ML**: FinBERT transformer model (ProsusAI/finbert) with rule-based fallback
+- **Background Processing**: Threading-based data collection with graceful shutdown
+- **Stock Validation**: 4,200+ symbols with JSON-based O(1) lookup
+- **Frontend**: Modern HTML5/CSS3 with responsive design and professional styling
+- **Architecture**: Clean separation of concerns with core/, web/, and scripts/ modules
 
 ## 🚀 Quick Start
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/reddit-stock-monitor.git
-cd reddit-stock-monitor
+git clone https://github.com/yourusername/stockhark.git
+cd stockhark
 ```
 
-### 2. Install Dependencies
+### 2. Set Up Virtual Environment
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/Mac
+```
+
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Download NLTK Data
+### 4. Configure Reddit API
 
-```python
-python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-```
-
-### 4. Set Up Environment Variables
-
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your actual credentials:
+Copy `.env.example` to `.env` and add your Reddit API credentials:
 
 ```env
-SECRET_KEY=your-secret-key-here
-REDDIT_CLIENT_ID=your-reddit-client-id
-REDDIT_CLIENT_SECRET=your-reddit-client-secret
-REDDIT_USER_AGENT=StockMonitor/1.0
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
+REDDIT_CLIENT_ID=your_reddit_client_id
+REDDIT_CLIENT_SECRET=your_reddit_client_secret  
+REDDIT_USER_AGENT=StockHark/1.0 by YourUsername
 ```
 
-### 5. Test Your Setup
+Get credentials at: https://www.reddit.com/prefs/apps
+
+### 5. Run StockHark
 
 ```bash
-python test_connections.py
+python main.py
 ```
 
-This will verify all components are working correctly.
+Visit `http://127.0.0.1:5000` to access your StockHark dashboard!
 
-### 6. Run the Application
+### 6. Optional: Manual Data Collection
 
 ```bash
-python app.py
+python scripts/manual_collect.py
 ```
 
-Visit `http://localhost:5000` to see your StockHark dashboard in action!
+This runs a 15-minute Reddit collection session for immediate data.
+
+## 🏗️ Architecture
+
+```
+StockHark/
+├── main.py                           # Main entry point
+├── src/stockhark/
+│   ├── app.py                       # Flask application with background collection
+│   ├── core/                        # Core business logic
+│   │   ├── background_collector.py  # Automated 30-min data collection
+│   │   ├── database.py              # SQLite operations with optimization
+│   │   ├── enhanced_sentiment.py    # FinBERT + rule-based sentiment
+│   │   └── validator.py             # Stock symbol validation (4,200+ symbols)
+│   └── web/                         # Web interface
+│       ├── templates/               # HTML templates (no refresh needed)
+│       └── static/                  # CSS/JS assets
+├── scripts/                         # Manual collection utilities
+│   ├── manual_collect.py            # 15-minute collection script
+│   └── collect_fresh_data.py        # Batch data collection
+└── src/data/json/                   # Stock symbol databases
+```
+
+## 📊 Current Database Stats
+
+- **1,500+ Stock Mentions** tracked from Reddit
+- **200+ Unique Stocks** across all markets  
+- **4,200+ Stock Symbols** validated (US/International)
+- **1.7MB Database** with optimized indexing
+- **Background Collection** every 30 minutes automatically
 
 ## 🔧 Configuration
 
 ### Reddit API Setup
 
 1. Go to [Reddit Apps](https://www.reddit.com/prefs/apps)
-2. Click "Create App" or "Create Another App"
+2. Click "Create App" or "Create Another App"  
 3. Choose "script" as the app type
 4. Note your client ID and secret
-5. Set a user agent like "StockMonitor/1.0"
+5. Set user agent like "StockHark/1.0 by YourUsername"
 
 ### Email Setup (Gmail)
 
