@@ -25,7 +25,7 @@ try:
 except ImportError:
     pass
 
-from stockhark.enhanced_sentiment import EnhancedSentimentAnalyzer
+from stockhark.sentiment_analyzer import EnhancedSentimentAnalyzer
 from stockhark.core.validator import StockValidator
 from stockhark.core.database import init_db, add_stock_data, get_top_stocks, get_database_stats
 

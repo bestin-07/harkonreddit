@@ -13,7 +13,7 @@ Usage:
     from stockhark.core import init_db
     from stockhark.core.database import get_top_stocks
     from stockhark.core.validator import StockValidator
-    from stockhark.enhanced_sentiment import get_enhanced_analyzer
+    from stockhark.sentiment_analyzer import get_enhanced_analyzer
 """
 
 # Core imports for external use
@@ -67,5 +67,5 @@ __all__ = [
 ]
 
 # Note: Enhanced sentiment analysis is now available through:
-# from stockhark.enhanced_sentiment import get_enhanced_analyzer
+# from stockhark.sentiment_analyzer import get_enhanced_analyzer
 # from stockhark.core.sentiment import create_analyzer
