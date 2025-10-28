@@ -97,7 +97,7 @@ class BackgroundDataCollector:
         """Collect fresh data from Reddit"""
         try:
             # Import here to avoid circular imports
-            from ..core.enhanced_sentiment import EnhancedSentimentAnalyzer
+            from ..enhanced_sentiment import EnhancedSentimentAnalyzer
             from ..core.validator import StockValidator
             from ..core.reddit_client import get_reddit_client
             from ..core.database import add_stock_data

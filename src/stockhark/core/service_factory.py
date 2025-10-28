@@ -99,7 +99,7 @@ class ServiceFactory:
         key = f'sentiment_analyzer_{enable_finbert or self.config.enable_finbert}'
         
         if key not in self._services:
-            from .enhanced_sentiment import EnhancedSentimentAnalyzer
+            from ..enhanced_sentiment import EnhancedSentimentAnalyzer
             
             finbert_enabled = enable_finbert if enable_finbert is not None else self.config.enable_finbert
             self._services[key] = EnhancedSentimentAnalyzer(enable_finbert=finbert_enabled)

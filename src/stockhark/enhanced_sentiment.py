@@ -10,8 +10,8 @@ import logging
 from typing import Dict, Any, List, Optional, Union
 import time
 
-from sentiment import create_enhanced_analyzer, BaseSentimentAnalyzer
-from core.service_factory import ServiceFactory
+from .sentiment import create_enhanced_analyzer, BaseSentimentAnalyzer
+from .core.service_factory import ServiceFactory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
