@@ -1,4 +1,4 @@
-// Main JavaScript functionality for StockHark
+// Main JavaScript functionality for HarkOnReddit
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-StockHark - Reddit Stock Sentiment Monitor
+HarkOnReddit - Reddit Stock Sentiment Monitor
 Main entry point for the application
 """
 
@@ -16,7 +16,7 @@ from stockhark.app import app
 from stockhark.config import FLASK_CONFIG
 
 if __name__ == "__main__":
-    print("🚀 Starting StockHark - Reddit Stock Sentiment Monitor")
+    print("🚀 Starting HarkOnReddit - Reddit Stock Sentiment Monitor")
     print(f"   📊 Database: {src_dir}/data/stocks.db")
     print(f"   🌐 Server: http://{FLASK_CONFIG['HOST']}:{FLASK_CONFIG['PORT']}")
     print("   📰 Monitoring Reddit for stock mentions...")
