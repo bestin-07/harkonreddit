@@ -142,7 +142,7 @@ class StockValidator:
     
     def extract_and_validate(self, text: str, max_symbols: int = 10) -> List[str]:
         """
-        Extract and validate stock symbols from text with intelligent filtering
+        Optimized extraction and validation with single-pass processing
         
         Args:
             text: Text to search for stock symbols
@@ -151,33 +151,50 @@ class StockValidator:
         Returns:
             List of validated stock symbols
         """
-        # Find potential symbols using regex
-        potential_symbols = self.stock_pattern.findall(text.upper())
-        
-        # Apply intelligent filtering
+        # Single-pass optimized approach
         filtered_symbols = []
         seen = set()
         
-        for symbol in potential_symbols:
-            # Skip if already processed
-            if symbol in seen:
+        # Use regex iterator for early termination and memory efficiency
+        text_upper = text.upper()
+        
+        for match in self.stock_pattern.finditer(text_upper):
+            symbol = match.group()
+            
+            # Skip if already processed or max reached
+            if symbol in seen or len(filtered_symbols) >= max_symbols:
                 continue
             seen.add(symbol)
             
-            # Apply filters
-            if (len(symbol) >= 1 and len(symbol) <= 5 and  # Valid length
+            # Combined validation in single check - avoids multiple lookups
+            if (1 <= len(symbol) <= 5 and  # Valid length
+                symbol.isalpha() and  # Only letters
                 symbol not in self.false_positive_filter and  # Not common word
-                symbol.isalpha()):  # Only letters
+                symbol in self.all_symbols):  # Valid stock symbol (O(1) hash lookup)
                 
-                # Validate against actual stock symbols
-                if self.is_valid_symbol(symbol):
-                    filtered_symbols.append(symbol)
-                    
-                    # Stop at max_symbols
-                    if len(filtered_symbols) >= max_symbols:
-                        break
+                filtered_symbols.append(symbol)
         
         return filtered_symbols
+    
+    def extract_and_validate_batch(self, texts: List[str], max_symbols_per_text: int = 10) -> List[List[str]]:
+        """
+        Batch process multiple texts for even better performance
+        
+        Args:
+            texts: List of texts to process
+            max_symbols_per_text: Maximum symbols per text
+            
+        Returns:
+            List of symbol lists, one for each input text
+        """
+        results = []
+        
+        for text in texts:
+            # Use the optimized single-text method
+            symbols = self.extract_and_validate(text, max_symbols_per_text)
+            results.append(symbols)
+        
+        return results
     
     def get_validator_stats(self) -> Dict[str, int]:
         """Get validator statistics"""

@@ -119,15 +119,18 @@ class ServiceFactory:
             
             # Resolve relative paths
             if not os.path.isabs(folder_path):
-                # Assume relative to src/data/json
-                src_dir = Path(__file__).parent.parent
-                folder_path = str(src_dir / folder_path)
+                # Path from service_factory.py: src/stockhark/core/service_factory.py
+                # parent.parent gives us src/stockhark/, parent.parent.parent gives us src/
+                # We want src/data/json
+                src_dir = Path(__file__).parent.parent.parent
+                resolved_path = src_dir / folder_path
+                folder_path = str(resolved_path)
             
             self._services[key] = StockValidator(
                 json_folder_path=folder_path,
                 silent=is_silent
             )
-            self.logger.debug(f"Stock validator initialized (path: {folder_path}, silent: {is_silent})")
+            self.logger.debug(f"Stock validator initialized with {len(self._services[key].all_symbols)} symbols (path: {folder_path})")
         
         return self._services[key]
     

@@ -45,62 +45,6 @@ def get_db_connection():
         if conn:
             conn.close()
 
-def init_database() -> None:
-    """
-    Initialize database with required tables and indexes
-    Creates optimized schema for high-performance stock data operations
-    """
-    with get_db_connection() as conn:
-        # Subscribers table for email alerts
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS subscribers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                is_active BOOLEAN DEFAULT 1,
-                preferences TEXT DEFAULT '{}',
-                last_notification TIMESTAMP
-            )
-        ''')
-        
-        # Enhanced stock_data table with better normalization
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS stock_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                symbol TEXT NOT NULL,
-                sentiment REAL NOT NULL,
-                sentiment_label TEXT NOT NULL,
-                confidence REAL DEFAULT 0.0,
-                mentions INTEGER DEFAULT 1,
-                source TEXT NOT NULL,
-                post_url TEXT,
-                post_id TEXT,
-                timestamp TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                -- Add constraints
-                CHECK (sentiment >= -1.0 AND sentiment <= 1.0),
-                CHECK (confidence >= 0.0 AND confidence <= 1.0),
-                CHECK (sentiment_label IN ('bullish', 'bearish', 'neutral'))
-            )
-        ''')
-        
-        # Create optimized indexes for common query patterns
-        indexes = [
-            'CREATE INDEX IF NOT EXISTS idx_stock_symbol ON stock_data(symbol)',
-            'CREATE INDEX IF NOT EXISTS idx_stock_timestamp ON stock_data(timestamp DESC)',
-            'CREATE INDEX IF NOT EXISTS idx_stock_symbol_timestamp ON stock_data(symbol, timestamp DESC)',
-            'CREATE INDEX IF NOT EXISTS idx_sentiment_label ON stock_data(sentiment_label)',
-            'CREATE INDEX IF NOT EXISTS idx_source ON stock_data(source)',
-            'CREATE INDEX IF NOT EXISTS idx_post_url ON stock_data(post_url)',
-            'CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers(is_active, email)'
-        ]
-        
-        for index_sql in indexes:
-            conn.execute(index_sql)
-        
-        conn.commit()
-
 # Subscriber Management Functions
 
 def add_subscriber(email: str, preferences: Optional[str] = None) -> bool:
@@ -553,6 +497,61 @@ def migrate_database() -> None:
 
 # Utility function for backwards compatibility
 def init_db():  
-    """Legacy function name - calls init_database() and migration"""
-    init_database()
+    """
+    Initialize database with required tables, indexes, and apply migrations
+    Creates optimized schema for high-performance stock data operations
+    """
+    # First, create all tables and indexes
+    with get_db_connection() as conn:
+        # Subscribers table for email alerts
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS subscribers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1,
+                preferences TEXT DEFAULT '{}',
+                last_notification TIMESTAMP
+            )
+        ''')
+        
+        # Enhanced stock_data table with better normalization
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS stock_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                sentiment REAL NOT NULL,
+                sentiment_label TEXT NOT NULL,
+                confidence REAL DEFAULT 0.0,
+                mentions INTEGER DEFAULT 1,
+                source TEXT NOT NULL,
+                post_url TEXT,
+                post_id TEXT,
+                timestamp TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                -- Add constraints
+                CHECK (sentiment >= -1.0 AND sentiment <= 1.0),
+                CHECK (confidence >= 0.0 AND confidence <= 1.0),
+                CHECK (sentiment_label IN ('bullish', 'bearish', 'neutral'))
+            )
+        ''')
+        
+        # Create optimized indexes for common query patterns
+        indexes = [
+            'CREATE INDEX IF NOT EXISTS idx_stock_symbol ON stock_data(symbol)',
+            'CREATE INDEX IF NOT EXISTS idx_stock_timestamp ON stock_data(timestamp DESC)',
+            'CREATE INDEX IF NOT EXISTS idx_stock_symbol_timestamp ON stock_data(symbol, timestamp DESC)',
+            'CREATE INDEX IF NOT EXISTS idx_sentiment_label ON stock_data(sentiment_label)',
+            'CREATE INDEX IF NOT EXISTS idx_source ON stock_data(source)',
+            'CREATE INDEX IF NOT EXISTS idx_post_url ON stock_data(post_url)',
+            'CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers(is_active, email)'
+        ]
+        
+        for index_sql in indexes:
+            conn.execute(index_sql)
+        
+        conn.commit()
+    
+    # Apply any necessary migrations
     migrate_database()

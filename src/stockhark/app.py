@@ -13,7 +13,6 @@ try:
 except ImportError:
     pass  # dotenv is optional
 
-from .monitoring.reddit_client import RedditMonitor
 from .core.enhanced_sentiment import EnhancedSentimentAnalyzer
 from .core.validator import StockValidator
 from .core.reddit_client import get_reddit_client, is_reddit_configured

@@ -10,7 +10,7 @@ Key Components:
 - Fast stock symbol validation (validator)
 
 Usage:
-    from stockhark.core import EnhancedSentimentAnalyzer, init_database
+    from stockhark.core import EnhancedSentimentAnalyzer, init_db
     from stockhark.core.database import get_top_stocks
     from stockhark.core.validator import StockValidator
 """
@@ -18,7 +18,7 @@ Usage:
 # Core imports for external use
 from .enhanced_sentiment import EnhancedSentimentAnalyzer
 from .database import (
-    init_database,
+    init_db,
     get_db_connection,
     get_top_stocks,
     get_stock_details,
@@ -73,7 +73,7 @@ __all__ = [
     'FINBERT_AVAILABLE',
     
     # Database Operations
-    'init_database',
+    'init_db',
     'get_db_connection', 
     'get_top_stocks',
     'get_stock_details',
