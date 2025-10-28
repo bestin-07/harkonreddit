@@ -8,9 +8,13 @@ import os
 import sys
 from pathlib import Path
 
-# Add src directory to Python path
+# Setup Python path using centralized utility
 src_dir = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_dir))
+
+# Now we can import path utilities
+from stockhark.core.path_utils import setup_python_path
+setup_python_path()
 
 def main():
     """Main entry point for StockHark application"""

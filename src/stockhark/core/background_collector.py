@@ -99,22 +99,15 @@ class BackgroundDataCollector:
             # Import here to avoid circular imports
             from ..core.enhanced_sentiment import EnhancedSentimentAnalyzer
             from ..core.validator import StockValidator
+            from ..core.reddit_client import get_reddit_client
             from ..core.database import add_stock_data
             from ..config import DATA_DIR
             
             self.logger.info("Starting data collection cycle")
             
-            # Initialize components
-            reddit = praw.Reddit(
-                client_id=os.getenv('REDDIT_CLIENT_ID'),
-                client_secret=os.getenv('REDDIT_CLIENT_SECRET'),
-                user_agent=os.getenv('REDDIT_USER_AGENT')
-            )
-            
-            sentiment_analyzer = EnhancedSentimentAnalyzer(enable_finbert=False)
-            
-            json_path = str(DATA_DIR / "json")
-            stock_validator = StockValidator(json_folder_path=json_path, silent=True)
+            # Initialize components using ServiceFactory
+            from .service_factory import create_standard_components
+            reddit, sentiment_analyzer, stock_validator = create_standard_components(enable_finbert=False)
             
             # Focus on most active subreddits
             subreddits = ['wallstreetbets', 'stocks', 'investing', 'pennystocks', 'options']

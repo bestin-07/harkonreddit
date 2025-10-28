@@ -16,6 +16,7 @@ except ImportError:
 from .monitoring.reddit_client import RedditMonitor
 from .core.enhanced_sentiment import EnhancedSentimentAnalyzer
 from .core.validator import StockValidator
+from .core.reddit_client import get_reddit_client, is_reddit_configured
 from .core.database import init_db, add_subscriber, get_active_subscribers, add_stock_data, get_top_stocks
 from .core.background_collector import start_background_collection, stop_background_collection, get_collection_status
 
@@ -29,10 +30,13 @@ mail = Mail(app)
 # Initialize database
 init_db()
 
-# Initialize monitoring services
-reddit_monitor = RedditMonitor()
-sentiment_analyzer = EnhancedSentimentAnalyzer(enable_finbert=False)  # Start with rule-based, load FinBERT on demand
-stock_validator = StockValidator(silent=True)  # Fast stock symbol validation
+# Initialize services using ServiceFactory
+from .core.service_factory import get_service_factory
+
+factory = get_service_factory()
+reddit_monitor = factory.get_reddit_monitor()
+sentiment_analyzer = factory.get_sentiment_analyzer(enable_finbert=False)
+stock_validator = factory.get_stock_validator()
 
 # Start background data collection
 print("🔄 Starting background data collection...")
@@ -419,8 +423,8 @@ def create_app():
     """Create and configure the Flask application"""
     print("🚀 Initializing StockHark with Background Data Collection")
     
-    # Initialize database
-    init_db()
+    # Initialize services using factory
+    factory.initialize_database()
     
     # Start background collection
     start_background_collection()

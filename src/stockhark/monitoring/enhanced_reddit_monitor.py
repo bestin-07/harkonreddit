@@ -8,16 +8,13 @@ import praw
 from datetime import datetime, timedelta
 import os
 import re
+from ..core.reddit_client import get_reddit_client
 
 class EnhancedRedditMonitor:
     """Enhanced Reddit API monitor with broader subreddit coverage"""
     
     def __init__(self):
-        self.reddit = praw.Reddit(
-            client_id=os.environ.get('REDDIT_CLIENT_ID', 'your-client-id'),
-            client_secret=os.environ.get('REDDIT_CLIENT_SECRET', 'your-client-secret'),
-            user_agent=os.environ.get('REDDIT_USER_AGENT', 'StockMonitor/1.0')
-        )
+        self.reddit = get_reddit_client()
         
         # Comprehensive subreddit list for global stock coverage
         self.financial_subreddits = {

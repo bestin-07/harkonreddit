@@ -11,9 +11,12 @@ import praw
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Add src directory to path
-src_dir = Path(__file__).parent / "src"
+# Setup script environment using centralized utility  
+src_dir = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_dir))
+
+from stockhark.core.path_utils import setup_script_environment
+setup_script_environment()
 
 # Load environment variables
 try:
@@ -41,22 +44,10 @@ def collect_fresh_data(duration_minutes=10, posts_per_subreddit=15):
         init_db()
         print("   ✅ Database ready")
         
-        # Initialize Reddit client directly
-        reddit = praw.Reddit(
-            client_id=os.getenv('REDDIT_CLIENT_ID'),
-            client_secret=os.getenv('REDDIT_CLIENT_SECRET'),
-            user_agent=os.getenv('REDDIT_USER_AGENT')
-        )
-        print("   ✅ Reddit client ready")
-        
-        # Initialize sentiment analyzer
-        sentiment_analyzer = EnhancedSentimentAnalyzer(enable_finbert=False)
-        print("   ✅ Sentiment analyzer ready")
-        
-        # Initialize stock validator with correct path
-        json_path = str(src_dir / "data" / "json")
-        stock_validator = StockValidator(json_folder_path=json_path, silent=False)
-        print("   ✅ Stock validator ready")
+        # Initialize components using ServiceFactory
+        from stockhark.core.service_factory import create_standard_components
+        reddit, sentiment_analyzer, stock_validator = create_standard_components(enable_finbert=False)
+        print("   ✅ All components ready")
         
     except Exception as e:
         print(f"❌ Initialization error: {e}")
