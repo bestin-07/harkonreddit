@@ -63,6 +63,11 @@ def subscribe():
     
     return render_template('subscribe.html')
 
+@app.route('/methodology')
+def methodology():
+    """Sentiment analysis methodology explanation page"""
+    return render_template('sentiment_methodology.html')
+
 @app.route('/api/stocks')
 def api_stocks():
     """API endpoint for stock data"""

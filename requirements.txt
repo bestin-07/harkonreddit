@@ -6,3 +6,8 @@ nltk==3.8.1
 requests==2.31.0
 python-dotenv==1.0.0
 Werkzeug==2.3.7
+
+# FinBERT Financial Sentiment Analysis Requirements
+torch>=1.9.0
+transformers>=4.20.0
+numpy>=1.21.0

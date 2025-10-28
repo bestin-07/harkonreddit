@@ -1,0 +1,687 @@
+{% extends "base.html" %}
+
+{% block title %}Sentiment Analysis Methodology - HarkOnReddit{% endblock %}
+
+{% block content %}
+<div class="methodology-container">
+    <div class="methodology-header">
+        <h1><i class="fas fa-brain"></i> Sentiment Analysis Methodology</h1>
+        <p class="subtitle">Understanding how HarkOnReddit analyzes financial sentiment using FinBERT</p>
+    </div>
+
+    <!-- Overview Section -->
+    <section class="method-section">
+        <h2><i class="fas fa-chart-line"></i> Overview</h2>
+        <p>HarkOnReddit uses state-of-the-art financial sentiment analysis powered by FinBERT models specifically trained on financial text including analyst reports, earnings calls, and financial news.</p>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <i class="fas fa-robot"></i>
+                <h3>FinBERT Models</h3>
+                <p>ProsusAI/finbert trained on financial domain text</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-clock"></i>
+                <h3>Time Decay</h3>
+                <p>Recent posts weighted higher with exponential decay</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-balance-scale"></i>
+                <h3>Normalization</h3>
+                <p>All scores bounded to [-1, +1] range</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-calculator"></i>
+                <h3>Weighted Average</h3>
+                <p>Stock-level sentiment from multiple mentions</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 1: FinBERT Analysis -->
+    <section class="method-section">
+        <h2><i class="fas fa-cogs"></i> Step 1: FinBERT Sentiment Analysis</h2>
+        <p>Each Reddit post is analyzed using FinBERT, which outputs probabilities for three sentiment classes:</p>
+        
+        <div class="formula-container">
+            <div class="formula-box">
+                <h4>FinBERT Output:</h4>
+                <div class="formula">
+                    P(positive) + P(neutral) + P(negative) = 1.0
+                </div>
+            </div>
+        </div>
+
+        <div class="example-box">
+            <h4>Example Analysis:</h4>
+            <div class="example-text">"TSLA earnings beat expectations, strong buy signal!"</div>
+            <div class="example-results">
+                <span class="prob positive">P(positive) = 0.85</span>
+                <span class="prob neutral">P(neutral) = 0.10</span>
+                <span class="prob negative">P(negative) = 0.05</span>
+            </div>
+        </div>
+
+        <div class="formula-container">
+            <div class="formula-box">
+                <h4>Sentence-Level Sentiment Score:</h4>
+                <div class="formula">
+                    Sentiment Score = P(positive) - P(negative)
+                </div>
+                <div class="formula-explanation">
+                    Range: [-1, +1] where +1 is most bullish, -1 is most bearish
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 2: Time Decay -->
+    <section class="method-section">
+        <h2><i class="fas fa-hourglass-half"></i> Step 2: Time Decay Weighting</h2>
+        <p>Recent news and posts carry more weight in determining current market sentiment. We apply exponential time decay to reduce the influence of older posts.</p>
+        
+        <div class="formula-container">
+            <div class="formula-box">
+                <h4>Time Decay Weight:</h4>
+                <div class="formula">
+                    w<sub>t</sub> = e<sup>-λ × Δt</sup>
+                </div>
+                <div class="formula-params">
+                    <ul>
+                        <li><strong>λ (lambda)</strong>: Decay rate parameter (default: 0.1)</li>
+                        <li><strong>Δt</strong>: Time difference in hours from current time</li>
+                        <li><strong>w<sub>t</sub></strong>: Time weight [0, 1]</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="decay-visualization">
+            <h4>Time Decay Example:</h4>
+            <div class="decay-timeline">
+                <div class="decay-point">
+                    <div class="time">Now</div>
+                    <div class="weight">w = 1.00</div>
+                    <div class="bar" style="width: 100%"></div>
+                </div>
+                <div class="decay-point">
+                    <div class="time">6h ago</div>
+                    <div class="weight">w = 0.55</div>
+                    <div class="bar" style="width: 55%"></div>
+                </div>
+                <div class="decay-point">
+                    <div class="time">12h ago</div>
+                    <div class="weight">w = 0.30</div>
+                    <div class="bar" style="width: 30%"></div>
+                </div>
+                <div class="decay-point">
+                    <div class="time">24h ago</div>
+                    <div class="weight">w = 0.09</div>
+                    <div class="bar" style="width: 9%"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 3: Source Weighting -->
+    <section class="method-section">
+        <h2><i class="fas fa-shield-alt"></i> Step 3: Source Reliability Weighting</h2>
+        <p>Different sources have varying levels of credibility. We apply source weights to account for reliability.</p>
+        
+        <div class="source-weights">
+            <div class="source-item">
+                <i class="fab fa-reddit"></i>
+                <div class="source-info">
+                    <h4>Reddit Posts</h4>
+                    <div class="weight-value">w<sub>s</sub> = 1.0</div>
+                    <p>Standard baseline weight for Reddit discussions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 4: Stock-Level Aggregation -->
+    <section class="method-section">
+        <h2><i class="fas fa-chart-bar"></i> Step 4: Stock-Level Sentiment Aggregation</h2>
+        <p>Multiple mentions of the same stock are combined using a weighted average that considers both time decay and source reliability.</p>
+        
+        <div class="formula-container">
+            <div class="formula-box">
+                <h4>Weighted Stock Sentiment:</h4>
+                <div class="formula">
+                    Stock Sentiment = 
+                    <div class="fraction">
+                        <div class="numerator">∑<sub>i</sub> (score<sub>i</sub> × w<sub>t,i</sub> × w<sub>s,i</sub>)</div>
+                        <div class="denominator">∑<sub>i</sub> (w<sub>t,i</sub> × w<sub>s,i</sub>)</div>
+                    </div>
+                </div>
+                <div class="formula-params">
+                    <ul>
+                        <li><strong>score<sub>i</sub></strong>: FinBERT sentiment score for mention i</li>
+                        <li><strong>w<sub>t,i</sub></strong>: Time decay weight for mention i</li>
+                        <li><strong>w<sub>s,i</sub></strong>: Source reliability weight for mention i</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="example-calculation">
+            <h4>Example Calculation for TSLA:</h4>
+            <table class="calculation-table">
+                <thead>
+                    <tr>
+                        <th>Post</th>
+                        <th>Time</th>
+                        <th>Sentiment</th>
+                        <th>Time Weight</th>
+                        <th>Source Weight</th>
+                        <th>Combined Weight</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"TSLA bullish!"</td>
+                        <td>1h ago</td>
+                        <td>+0.80</td>
+                        <td>0.90</td>
+                        <td>1.0</td>
+                        <td>0.90</td>
+                    </tr>
+                    <tr>
+                        <td>"Tesla looks weak"</td>
+                        <td>6h ago</td>
+                        <td>-0.60</td>
+                        <td>0.55</td>
+                        <td>1.0</td>
+                        <td>0.55</td>
+                    </tr>
+                    <tr>
+                        <td>"TSLA strong buy"</td>
+                        <td>12h ago</td>
+                        <td>+0.75</td>
+                        <td>0.30</td>
+                        <td>1.0</td>
+                        <td>0.30</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="calculation-result">
+                <div class="calc-step">
+                    <strong>Numerator:</strong> (0.80 × 0.90) + (-0.60 × 0.55) + (0.75 × 0.30) = 0.72 - 0.33 + 0.225 = 0.615
+                </div>
+                <div class="calc-step">
+                    <strong>Denominator:</strong> 0.90 + 0.55 + 0.30 = 1.75
+                </div>
+                <div class="calc-step">
+                    <strong>TSLA Sentiment:</strong> 0.615 ÷ 1.75 = 0.351
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Step 5: Normalization -->
+    <section class="method-section">
+        <h2><i class="fas fa-compress-arrows-alt"></i> Step 5: Final Normalization</h2>
+        <p>The final step ensures all sentiment scores are bounded within the interpretable [-1, +1] range.</p>
+        
+        <div class="formula-container">
+            <div class="formula-box">
+                <h4>Normalization Formula:</h4>
+                <div class="formula">
+                    Final Sentiment = max(min(weighted_avg, 1.0), -1.0)
+                </div>
+                <div class="formula-explanation">
+                    This clamps the value to ensure: -1.0 ≤ sentiment ≤ +1.0
+                </div>
+            </div>
+        </div>
+
+        <div class="sentiment-scale">
+            <h4>Sentiment Interpretation Scale:</h4>
+            <div class="scale-container">
+                <div class="scale-segment bearish">
+                    <div class="scale-range">-1.0 to -0.3</div>
+                    <div class="scale-label">Strong Bearish</div>
+                </div>
+                <div class="scale-segment weak-bearish">
+                    <div class="scale-range">-0.3 to -0.1</div>
+                    <div class="scale-label">Weak Bearish</div>
+                </div>
+                <div class="scale-segment neutral">
+                    <div class="scale-range">-0.1 to +0.1</div>
+                    <div class="scale-label">Neutral</div>
+                </div>
+                <div class="scale-segment weak-bullish">
+                    <div class="scale-range">+0.1 to +0.3</div>
+                    <div class="scale-label">Weak Bullish</div>
+                </div>
+                <div class="scale-segment bullish">
+                    <div class="scale-range">+0.3 to +1.0</div>
+                    <div class="scale-label">Strong Bullish</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Details -->
+    <section class="method-section">
+        <h2><i class="fas fa-microchip"></i> Technical Implementation</h2>
+        <div class="tech-details">
+            <div class="tech-card">
+                <h4><i class="fas fa-brain"></i> FinBERT Model</h4>
+                <ul>
+                    <li><strong>Model:</strong> ProsusAI/finbert</li>
+                    <li><strong>Architecture:</strong> BERT-base transformer</li>
+                    <li><strong>Training Data:</strong> Financial text corpus</li>
+                    <li><strong>Output:</strong> 3-class probabilities (pos/neu/neg)</li>
+                </ul>
+            </div>
+            
+            <div class="tech-card">
+                <h4><i class="fas fa-cog"></i> Parameters</h4>
+                <ul>
+                    <li><strong>Time Decay λ:</strong> 0.1 (adjustable)</li>
+                    <li><strong>Reddit Source Weight:</strong> 1.0</li>
+                    <li><strong>Text Truncation:</strong> 512 tokens max</li>
+                    <li><strong>Stock Pattern:</strong> 1-5 letter uppercase</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Advantages -->
+    <section class="method-section">
+        <h2><i class="fas fa-trophy"></i> Advantages of This Approach</h2>
+        <div class="advantages-grid">
+            <div class="advantage-item">
+                <i class="fas fa-graduation-cap"></i>
+                <h4>Financial Domain Expertise</h4>
+                <p>FinBERT is specifically trained on financial text, understanding context better than generic models</p>
+            </div>
+            <div class="advantage-item">
+                <i class="fas fa-clock"></i>
+                <h4>Time-Aware Analysis</h4>
+                <p>Recent sentiment carries more weight, reflecting current market conditions</p>
+            </div>
+            <div class="advantage-item">
+                <i class="fas fa-balance-scale"></i>
+                <h4>Mathematically Sound</h4>
+                <p>Normalized scores enable fair comparison across different stocks and time periods</p>
+            </div>
+            <div class="advantage-item">
+                <i class="fas fa-chart-line"></i>
+                <h4>Actionable Insights</h4>
+                <p>Clear interpretation scale helps users understand market sentiment strength</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="methodology-footer">
+        <div class="disclaimer">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p><strong>Disclaimer:</strong> This sentiment analysis is for informational purposes only and should not be considered as financial advice. Always consult with qualified financial professionals before making investment decisions.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.methodology-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    font-family: var(--font-family);
+}
+
+.methodology-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: var(--border-radius);
+}
+
+.methodology-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.method-section {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    border-left: 4px solid var(--primary-color);
+}
+
+.method-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 2px solid var(--gray-200);
+}
+
+.feature-card i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.formula-container {
+    margin: 2rem 0;
+}
+
+.formula-box {
+    background: var(--gray-50);
+    border: 2px solid var(--info-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+}
+
+.formula {
+    font-size: 1.3rem;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--gray-800);
+}
+
+.fraction {
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.numerator, .denominator {
+    display: block;
+    padding: 0.2rem 0.5rem;
+}
+
+.numerator {
+    border-bottom: 2px solid var(--gray-800);
+}
+
+.formula-params ul {
+    margin-top: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.formula-explanation {
+    font-style: italic;
+    color: var(--gray-600);
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.example-box {
+    background: var(--success-color);
+    color: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+}
+
+.example-text {
+    font-style: italic;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.example-results {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.prob {
+    background: rgba(255,255,255,0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.decay-visualization {
+    background: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+}
+
+.decay-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.decay-point {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.time {
+    width: 80px;
+    font-weight: bold;
+}
+
+.weight {
+    width: 80px;
+    font-family: monospace;
+}
+
+.bar {
+    height: 20px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.source-weights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.source-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--gray-200);
+    flex: 1;
+    min-width: 250px;
+}
+
+.source-item i {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.weight-value {
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--success-color);
+    font-size: 1.1rem;
+}
+
+.calculation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: white;
+}
+
+.calculation-table th,
+.calculation-table td {
+    padding: 0.8rem;
+    text-align: center;
+    border: 1px solid var(--gray-300);
+}
+
+.calculation-table th {
+    background: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.calculation-result {
+    background: var(--info-color);
+    color: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+}
+
+.calc-step {
+    margin: 0.5rem 0;
+    font-family: monospace;
+}
+
+.sentiment-scale {
+    margin: 2rem 0;
+}
+
+.scale-container {
+    display: flex;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.scale-segment {
+    flex: 1;
+    padding: 1rem;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+}
+
+.bearish { background: var(--bearish-color); }
+.weak-bearish { background: #f56565; }
+.neutral { background: var(--neutral-color); }
+.weak-bullish { background: #68d391; }
+.bullish { background: var(--bullish-color); }
+
+.scale-range {
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.scale-label {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.tech-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.tech-card {
+    background: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--gray-200);
+}
+
+.tech-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.advantages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.advantage-item {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--success-color);
+    text-align: center;
+}
+
+.advantage-item i {
+    font-size: 2rem;
+    color: var(--success-color);
+    margin-bottom: 1rem;
+}
+
+.methodology-footer {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: var(--warning-color);
+    color: white;
+    border-radius: var(--border-radius);
+}
+
+.disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.disclaimer i {
+    font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .methodology-container {
+        padding: 1rem;
+    }
+    
+    .methodology-header h1 {
+        font-size: 2rem;
+    }
+    
+    .feature-grid,
+    .tech-details,
+    .advantages-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .decay-point {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .scale-container {
+        flex-direction: column;
+    }
+    
+    .example-results {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
