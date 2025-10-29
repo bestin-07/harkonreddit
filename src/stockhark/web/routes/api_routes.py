@@ -101,6 +101,117 @@ def stocks():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+def _get_basic_stock_info(cursor, symbol):
+    """Get basic stock statistics and sentiment distribution."""
+    cursor.execute('''
+        SELECT symbol, COUNT(*) as mentions, 
+               AVG(sentiment) as avg_sentiment,
+               SUM(CASE WHEN sentiment_label = 'bullish' THEN 1 ELSE 0 END) as bullish,
+               SUM(CASE WHEN sentiment_label = 'bearish' THEN 1 ELSE 0 END) as bearish,
+               SUM(CASE WHEN sentiment_label = 'neutral' THEN 1 ELSE 0 END) as neutral,
+               MIN(timestamp) as first_mention,
+               MAX(timestamp) as last_mention
+        FROM stock_data 
+        WHERE symbol = ? 
+        GROUP BY symbol
+    ''', (symbol.upper(),))
+    
+    return cursor.fetchone()
+
+def _get_recent_mentions(cursor, symbol, limit=10):
+    """Get recent mentions for a stock symbol."""
+    cursor.execute('''
+        SELECT timestamp, sentiment, sentiment_label, source, post_url
+        FROM stock_data 
+        WHERE symbol = ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+    ''', (symbol.upper(), limit))
+    
+    return cursor.fetchall()
+
+def _get_hourly_activity(cursor, symbol):
+    """Get hourly activity data for the last 24 hours."""
+    cursor.execute('''
+        SELECT strftime('%Y-%m-%d %H:00:00', timestamp) as hour,
+               COUNT(*) as mentions,
+               AVG(sentiment) as avg_sentiment
+        FROM stock_data 
+        WHERE symbol = ? 
+        AND timestamp >= datetime('now', '-24 hours')
+        GROUP BY hour
+        ORDER BY hour
+    ''', (symbol.upper(),))
+    
+    return cursor.fetchall()
+
+def _get_top_sources(cursor, symbol, limit=5):
+    """Get top sources by mention count for a stock symbol."""
+    cursor.execute('''
+        SELECT source, COUNT(*) as mentions,
+               AVG(sentiment) as avg_sentiment
+        FROM stock_data 
+        WHERE symbol = ?
+        GROUP BY source
+        ORDER BY mentions DESC
+        LIMIT ?
+    ''', (symbol.upper(), limit))
+    
+    return cursor.fetchall()
+
+def _determine_overall_sentiment(avg_sentiment):
+    """Calculate overall sentiment label from average sentiment score."""
+    if avg_sentiment > 0.1:
+        return 'bullish'
+    elif avg_sentiment < -0.1:
+        return 'bearish'
+    else:
+        return 'neutral'
+
+def _format_stock_details_response(basic_info, recent_mentions, hourly_activity, top_sources, overall_sentiment):
+    """Format the complete stock details API response."""
+    symbol, mentions, avg_sentiment, bullish, bearish, neutral, first_mention, last_mention = basic_info
+    
+    return {
+        'symbol': symbol,
+        'basic_info': {
+            'mentions': mentions,
+            'avg_sentiment': round(avg_sentiment, 3),
+            'overall_sentiment': overall_sentiment,
+            'bullish': bullish,
+            'bearish': bearish,
+            'neutral': neutral,
+            'first_mention': first_mention,
+            'last_mention': last_mention
+        },
+        'recent_mentions': [
+            {
+                'timestamp': mention[0],
+                'sentiment': round(mention[1], 3),
+                'sentiment_label': mention[2],
+                'source': _format_source_for_display(mention[3]),
+                'post_url': mention[4]
+            }
+            for mention in recent_mentions
+        ],
+        'hourly_activity': [
+            {
+                'hour': hour[0],
+                'mentions': hour[1],
+                'avg_sentiment': round(hour[2], 3) if hour[2] else 0
+            }
+            for hour in hourly_activity
+        ],
+        'top_sources': [
+            {
+                'source': _format_source_for_display(source[0]),
+                'mentions': source[1],
+                'avg_sentiment': round(source[2], 3)
+            }
+            for source in top_sources
+        ]
+    }
+
 @api_bp.route('/stock/<symbol>')
 def stock_details(symbol):
     """API endpoint for detailed stock information"""
@@ -108,113 +219,21 @@ def stock_details(symbol):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # Get basic stock info
-            cursor.execute('''
-                SELECT symbol, COUNT(*) as mentions, 
-                       AVG(sentiment) as avg_sentiment,
-                       SUM(CASE WHEN sentiment_label = 'bullish' THEN 1 ELSE 0 END) as bullish,
-                       SUM(CASE WHEN sentiment_label = 'bearish' THEN 1 ELSE 0 END) as bearish,
-                       SUM(CASE WHEN sentiment_label = 'neutral' THEN 1 ELSE 0 END) as neutral,
-                       MIN(timestamp) as first_mention,
-                       MAX(timestamp) as last_mention
-                FROM stock_data 
-                WHERE symbol = ? 
-                GROUP BY symbol
-            ''', (symbol.upper(),))
-            
-            basic_info = cursor.fetchone()
+            # Get all required data
+            basic_info = _get_basic_stock_info(cursor, symbol)
             
             if not basic_info:
                 return jsonify({'error': f'Stock {symbol} not found'}), 404
 
-            symbol, mentions, avg_sentiment, bullish, bearish, neutral, first_mention, last_mention = basic_info
+            recent_mentions = _get_recent_mentions(cursor, symbol)
+            hourly_activity = _get_hourly_activity(cursor, symbol)
+            top_sources = _get_top_sources(cursor, symbol)
+            overall_sentiment = _determine_overall_sentiment(basic_info[2])  # avg_sentiment is index 2
             
-            # Get recent mentions with details
-            cursor.execute('''
-                SELECT timestamp, sentiment, sentiment_label, source, post_url
-                FROM stock_data 
-                WHERE symbol = ?
-                ORDER BY timestamp DESC
-                LIMIT 10
-            ''', (symbol.upper(),))
-            
-            recent_mentions = cursor.fetchall()
-            
-            # Get hourly activity for chart
-            cursor.execute('''
-                SELECT strftime('%Y-%m-%d %H:00:00', timestamp) as hour,
-                       COUNT(*) as mentions,
-                       AVG(sentiment) as avg_sentiment
-                FROM stock_data 
-                WHERE symbol = ? 
-                AND timestamp >= datetime('now', '-24 hours')
-                GROUP BY hour
-                ORDER BY hour
-            ''', (symbol.upper(),))
-            
-            hourly_activity = cursor.fetchall()
-            
-            # Get top sources
-            cursor.execute('''
-                SELECT source, COUNT(*) as mentions,
-                       AVG(sentiment) as avg_sentiment
-                FROM stock_data 
-                WHERE symbol = ?
-                GROUP BY source
-                ORDER BY mentions DESC
-                LIMIT 5
-            ''', (symbol.upper(),))
-            
-            top_sources = cursor.fetchall()
-            
-            # Determine overall sentiment
-            if avg_sentiment > 0.1:
-                overall_sentiment = 'bullish'
-            elif avg_sentiment < -0.1:
-                overall_sentiment = 'bearish'
-            else:
-                overall_sentiment = 'neutral'
-            
-            # Format response
-            stock_details = {
-                'symbol': symbol,
-                'basic_info': {
-                    'mentions': mentions,
-                    'avg_sentiment': round(avg_sentiment, 3),
-                    'overall_sentiment': overall_sentiment,
-                    'bullish': bullish,
-                    'bearish': bearish,
-                    'neutral': neutral,
-                    'first_mention': first_mention,
-                    'last_mention': last_mention
-                },
-                'recent_mentions': [
-                    {
-                        'timestamp': mention[0],
-                        'sentiment': round(mention[1], 3),
-                        'sentiment_label': mention[2],
-                        'source': _format_source_for_display(mention[3]),
-                        'post_url': mention[4]
-                    }
-                    for mention in recent_mentions
-                ],
-                'hourly_activity': [
-                    {
-                        'hour': hour[0],
-                        'mentions': hour[1],
-                        'avg_sentiment': round(hour[2], 3) if hour[2] else 0
-                    }
-                    for hour in hourly_activity
-                ],
-                'top_sources': [
-                    {
-                        'source': _format_source_for_display(source[0]),
-                        'mentions': source[1],
-                        'avg_sentiment': round(source[2], 3)
-                    }
-                    for source in top_sources
-                ]
-            }
+            # Format and return response
+            stock_details = _format_stock_details_response(
+                basic_info, recent_mentions, hourly_activity, top_sources, overall_sentiment
+            )
             
             return jsonify(stock_details)
         

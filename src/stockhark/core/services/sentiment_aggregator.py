@@ -161,44 +161,19 @@ class StockSentimentAggregator:
         # Cap the maximum weight
         return min(weight, MAX_POST_COUNT_WEIGHT)
     
-    def aggregate_stock_sentiment(self, mentions: List[SentimentMention], 
-                                include_debug: bool = False) -> AggregatedSentiment:
-        """
-        Steps 4-5: Aggregate multiple mentions into final stock sentiment
-        
-        Formula: Stock Sentiment = Σ(score_i × w_t,i × w_s,i) / Σ(w_t,i × w_s,i)
-        Then normalize to [-1, +1] range
-        
-        Args:
-            mentions: List of sentiment mentions for the stock
-            include_debug: Whether to include debug information
-            
-        Returns:
-            Aggregated sentiment result
-        """
-        if not mentions:
-            return AggregatedSentiment(
-                symbol="UNKNOWN",
-                final_sentiment=0.0,
-                sentiment_label="neutral",
-                confidence=0.0,
-                total_mentions=0
-            )
-        
-        symbol = mentions[0].symbol
-        reference_time = datetime.now()
-        
-        # Calculate unique posts count for post count weighting
+    def _calculate_unique_posts_count(self, mentions: List[SentimentMention]) -> int:
+        """Calculate the number of unique posts from mention data."""
         unique_post_ids = set()
         for mention in mentions:
             if hasattr(mention, 'post_id') and mention.post_id:
                 unique_post_ids.add(mention.post_id)
-        unique_posts_count = len(unique_post_ids) if unique_post_ids else len(mentions)
-        
-        # Step 3.2: Post count weight - gives more importance to widely discussed stocks
-        post_count_weight = self.get_post_count_weight(unique_posts_count)
-        
-        # Calculate weighted contributions
+        return len(unique_post_ids) if unique_post_ids else len(mentions)
+
+    def _calculate_weighted_contributions(self, mentions: List[SentimentMention], 
+                                       symbol: str, reference_time: datetime,
+                                       post_count_weight: float, 
+                                       include_debug: bool) -> Tuple[float, float, List[Dict]]:
+        """Calculate weighted sentiment contributions from all mentions."""
         weighted_numerator = 0.0
         weighted_denominator = 0.0
         debug_mentions = []
@@ -233,11 +208,15 @@ class StockSentimentAggregator:
                     'source_weight': round(source_weight, 4),
                     'symbol_weight': round(symbol_weight, 4),
                     'post_count_weight': round(post_count_weight, 4),
-                    'unique_posts': unique_posts_count,
+                    'unique_posts': self._calculate_unique_posts_count(mentions),
                     'total_weight': round(total_weight, 4),
                     'weighted_contribution': round(weighted_contribution, 4)
                 })
         
+        return weighted_numerator, weighted_denominator, debug_mentions
+
+    def _calculate_final_sentiment(self, weighted_numerator: float, weighted_denominator: float) -> float:
+        """Calculate and normalize the final sentiment score."""
         # Step 4: Calculate weighted average
         if weighted_denominator > 0:
             weighted_avg = weighted_numerator / weighted_denominator
@@ -245,25 +224,72 @@ class StockSentimentAggregator:
             weighted_avg = 0.0
         
         # Step 5: Final normalization (clamp to [-1, +1])
-        final_sentiment = max(MIN_SENTIMENT_SCORE, min(MAX_SENTIMENT_SCORE, weighted_avg))
+        return max(MIN_SENTIMENT_SCORE, min(MAX_SENTIMENT_SCORE, weighted_avg))
+
+    def _prepare_debug_info(self, debug_mentions: List[Dict], weighted_numerator: float,
+                          weighted_denominator: float, weighted_avg: float, 
+                          final_sentiment: float) -> Dict:
+        """Prepare debug information for aggregation result."""
+        return {
+            'mentions': debug_mentions,
+            'weighted_numerator': round(weighted_numerator, 4),
+            'weighted_denominator': round(weighted_denominator, 4),
+            'weighted_avg_before_clamp': round(weighted_avg, 4),
+            'final_sentiment_after_clamp': round(final_sentiment, 4),
+            'decay_lambda': self.decay_lambda
+        }
+
+    def aggregate_stock_sentiment(self, mentions: List[SentimentMention], 
+                                include_debug: bool = False) -> AggregatedSentiment:
+        """
+        Steps 4-5: Aggregate multiple mentions into final stock sentiment
         
-        # Determine sentiment label
+        Formula: Stock Sentiment = Σ(score_i × w_t,i × w_s,i) / Σ(w_t,i × w_s,i)
+        Then normalize to [-1, +1] range
+        
+        Args:
+            mentions: List of sentiment mentions for the stock
+            include_debug: Whether to include debug information
+            
+        Returns:
+            Aggregated sentiment result
+        """
+        if not mentions:
+            return AggregatedSentiment(
+                symbol="UNKNOWN",
+                final_sentiment=0.0,
+                sentiment_label="neutral",
+                confidence=0.0,
+                total_mentions=0
+            )
+        
+        symbol = mentions[0].symbol
+        reference_time = datetime.now()
+        
+        # Calculate unique posts and post count weight
+        unique_posts_count = self._calculate_unique_posts_count(mentions)
+        post_count_weight = self.get_post_count_weight(unique_posts_count)
+        
+        # Calculate weighted contributions
+        weighted_numerator, weighted_denominator, debug_mentions = self._calculate_weighted_contributions(
+            mentions, symbol, reference_time, post_count_weight, include_debug
+        )
+        
+        # Calculate final sentiment score
+        weighted_avg = weighted_numerator / weighted_denominator if weighted_denominator > 0 else 0.0
+        final_sentiment = self._calculate_final_sentiment(weighted_numerator, weighted_denominator)
+        
+        # Determine sentiment label and confidence
         sentiment_label = self._determine_sentiment_label(final_sentiment)
-        
-        # Calculate confidence based on consensus and weight distribution
         confidence = self._calculate_confidence(mentions, weighted_denominator)
         
-        # Prepare debug info
+        # Prepare debug info if requested
         debug_info = None
         if include_debug:
-            debug_info = {
-                'mentions': debug_mentions,
-                'weighted_numerator': round(weighted_numerator, 4),
-                'weighted_denominator': round(weighted_denominator, 4),
-                'weighted_avg_before_clamp': round(weighted_avg, 4),
-                'final_sentiment_after_clamp': round(final_sentiment, 4),
-                'decay_lambda': self.decay_lambda
-            }
+            debug_info = self._prepare_debug_info(
+                debug_mentions, weighted_numerator, weighted_denominator, 
+                weighted_avg, final_sentiment
+            )
         
         return AggregatedSentiment(
             symbol=symbol,
