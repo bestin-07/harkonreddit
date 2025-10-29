@@ -99,6 +99,18 @@ NEUTRAL_SENTIMENT_SCORE = 0.0
 SENTIMENT_TIME_DECAY_LAMBDA = 0.1
 SENTIMENT_TIME_WINDOW_HOURS = 24
 
+# Source reliability weights (as per methodology specification)
+SOURCE_WEIGHTS = {
+    'reddit': 1.0,  # Baseline weight for Reddit posts
+    'reddit/r/investing': 1.0,
+    'reddit/r/stocks': 1.0,
+    'reddit/r/SecurityAnalysis': 1.0,
+    'reddit/r/ValueInvesting': 1.0,
+    'reddit/r/wallstreetbets': 0.8,  # Lower reliability due to meme nature
+    'reddit/r/pennystocks': 0.7,  # Lower reliability due to speculation
+    'default': 1.0  # Default weight for unknown sources
+}
+
 # ==============================================================================
 # STOCK VALIDATION
 # ==============================================================================

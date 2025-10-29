@@ -94,7 +94,7 @@ class BackgroundDataCollector:
                 time.sleep(60)
     
     def _collect_data(self):
-        """Collect fresh data from Reddit"""
+        """Collect fresh data from Reddit using the full 5-step sentiment methodology"""
         try:
             # Import here to avoid circular imports
             from ...sentiment_analyzer import EnhancedSentimentAnalyzer
@@ -109,10 +109,14 @@ class BackgroundDataCollector:
             from .service_factory import create_standard_components
             reddit, sentiment_analyzer, stock_validator = create_standard_components()
             
+            # Import the new sentiment aggregation system
+            from .sentiment_aggregator import get_sentiment_aggregator, SentimentMention
+            aggregator = get_sentiment_aggregator()
+            
             # Focus on most active subreddits
             subreddits = ['wallstreetbets', 'stocks', 'investing', 'pennystocks', 'options']
             posts_per_subreddit = 10
-            stocks_found = 0
+            all_mentions = []  # Collect all mentions for aggregation
             
             for subreddit_name in subreddits:
                 if not self.running:
@@ -129,6 +133,11 @@ class BackgroundDataCollector:
                         if post.stickied:
                             continue
                         
+                        # Skip posts older than 24 hours (per methodology time window)
+                        post_age_hours = (datetime.now().timestamp() - post.created_utc) / 3600
+                        if post_age_hours > 24:
+                            continue
+                        
                         # Create full text
                         full_text = post.title
                         if hasattr(post, 'selftext') and post.selftext:
@@ -137,48 +146,61 @@ class BackgroundDataCollector:
                         # Extract and validate symbols
                         valid_symbols = stock_validator.extract_and_validate(full_text)
                         
-                        for symbol in valid_symbols:
-                            if not self.running:
-                                break
-                                
-                            # Analyze sentiment
-                            sentiment_score = sentiment_analyzer.analyze_sentiment(full_text)
+                        if valid_symbols:  # Only analyze sentiment if we found stocks
+                            # Get raw sentiment score (Step 1: FinBERT Analysis)
+                            underlying_analyzer = sentiment_analyzer._analyzer
+                            raw_sentiment = underlying_analyzer.analyze_sentiment(
+                                full_text, 
+                                timestamp=None,  # We'll pass timestamp separately
+                                apply_time_decay=False  # We handle time decay in aggregation
+                            )
                             
-                            # Convert to label
-                            if sentiment_score > 0.1:
-                                sentiment_label = 'bullish'
-                            elif sentiment_score < -0.1:
-                                sentiment_label = 'bearish'
-                            else:
-                                sentiment_label = 'neutral'
+                            # Create mentions for each symbol in this post
+                            post_timestamp = datetime.fromtimestamp(post.created_utc)
+                            post_source = f"reddit/r/{subreddit_name}"
+                            post_url = f"https://reddit.com{post.permalink}"
                             
-                            # Add to database
-                            try:
-                                add_stock_data(
+                            for symbol in valid_symbols:
+                                mention = SentimentMention(
                                     symbol=symbol,
-                                    sentiment=sentiment_score,
-                                    sentiment_label=sentiment_label,
-                                    confidence=0.7,
-                                    mentions=1,
-                                    source=f"reddit/r/{subreddit_name}",
-                                    post_url=f"https://reddit.com{post.permalink}",
-                                    timestamp=datetime.fromtimestamp(post.created_utc)
+                                    raw_sentiment=raw_sentiment,
+                                    timestamp=post_timestamp,
+                                    source=post_source,
+                                    text=full_text,
+                                    post_url=post_url
                                 )
+                                all_mentions.append(mention)
                                 
-                                stocks_found += 1
-                                
-                            except Exception as e:
-                                self.logger.error(f"Error saving {symbol}: {e}")
-                        
-                        # Small delay between posts
-                        time.sleep(0.1)
-                    
-                    # Delay between subreddits
-                    time.sleep(2)
-                    
                 except Exception as e:
-                    self.logger.error(f"Error processing r/{subreddit_name}: {e}")
+                    self.logger.error(f"Error collecting from r/{subreddit_name}: {e}")
                     continue
+            
+            # Apply Steps 2-5: Time Decay, Source Weighting, Aggregation, Normalization
+            if all_mentions:
+                self.logger.info(f"Collected {len(all_mentions)} mentions, aggregating by stock using full methodology...")
+                aggregated_results = aggregator.aggregate_multiple_stocks(all_mentions)
+                
+                # Store aggregated results in database
+                stocks_found = 0
+                for symbol, result in aggregated_results.items():
+                    try:
+                        add_stock_data(
+                            symbol=symbol,
+                            sentiment=result.final_sentiment,
+                            sentiment_label=result.sentiment_label.lower().replace(' ', '_'),
+                            confidence=result.confidence,
+                            mentions=result.total_mentions,
+                            source="methodology_v1.0_aggregated",
+                            post_url=None,
+                            timestamp=datetime.now()
+                        )
+                        stocks_found += 1
+                                
+                    except Exception as e:
+                        self.logger.error(f"Failed to add aggregated data for {symbol}: {e}")
+                        continue
+            else:
+                stocks_found = 0
             
             self.total_stocks_collected += stocks_found
             self.logger.info(f"Collection completed: {stocks_found} new stock mentions added")
