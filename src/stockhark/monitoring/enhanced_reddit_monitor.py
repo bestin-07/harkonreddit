@@ -8,7 +8,7 @@ import praw
 from datetime import datetime, timedelta
 import os
 import re
-from ..core.reddit_client import get_reddit_client
+from ..core.clients.reddit_client import get_reddit_client
 
 class EnhancedRedditMonitor:
     """Enhanced Reddit API monitor with broader subreddit coverage"""

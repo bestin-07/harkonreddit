@@ -7,9 +7,9 @@ from flask import Flask
 from flask_mail import Mail
 import atexit
 
-from .core.database import init_db
-from .core.service_factory import get_service_factory
-from .core.background_collector import start_background_collection, stop_background_collection
+from .core.data import init_db
+from .core.services import ServiceFactory, get_service_factory
+from .core.services import BackgroundDataCollector, start_background_collection, stop_background_collection
 from .web.routes import web_bp, api_bp
 
 def create_app(config=None):
@@ -71,7 +71,7 @@ def create_production_app():
     app = create_app()
     
     # Show startup info
-    from .core.database import get_database_stats
+    from .core.data import get_database_stats
     stats = get_database_stats()
     print(f"📊 Database: {stats['total_mentions']} mentions, {stats['unique_stocks']} stocks")
     print(f"🔄 Background collection active (30min intervals)")

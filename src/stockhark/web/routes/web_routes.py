@@ -6,7 +6,7 @@ Handles all HTML-rendering routes for the StockHark web interface
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from datetime import datetime
 
-from ...core.database import add_subscriber, get_top_stocks
+from ...core.data import add_subscriber, get_top_stocks
 
 # Create blueprint
 web_bp = Blueprint('web', __name__)

@@ -42,7 +42,7 @@ def main():
     
     try:
         # Import and initialize database
-        from stockhark.core.database import init_db, get_database_stats
+        from stockhark.core.data import init_db, get_database_stats
         
         print(" Initializing database...")
         init_db()

@@ -89,7 +89,7 @@ class ServiceFactory:
     def get_reddit_client(self):
         """Get Reddit client singleton"""
         if 'reddit_client' not in self._services:
-            from .reddit_client import get_reddit_client
+            from ..clients.reddit_client import get_reddit_client
             self._services['reddit_client'] = get_reddit_client()
             self.logger.debug("Reddit client initialized")
         return self._services['reddit_client']
@@ -99,7 +99,7 @@ class ServiceFactory:
         key = f'sentiment_analyzer_{enable_finbert or self.config.enable_finbert}'
         
         if key not in self._services:
-            from ..sentiment_analyzer import EnhancedSentimentAnalyzer
+            from ...sentiment_analyzer import EnhancedSentimentAnalyzer
             
             finbert_enabled = enable_finbert if enable_finbert is not None else self.config.enable_finbert
             self._services[key] = EnhancedSentimentAnalyzer(enable_finbert=finbert_enabled)
@@ -115,7 +115,7 @@ class ServiceFactory:
         key = f'stock_validator_{folder_path}_{is_silent}'
         
         if key not in self._services:
-            from .validator import StockValidator
+            from ..validator import StockValidator
             
             # Resolve relative paths
             if not os.path.isabs(folder_path):
@@ -136,13 +136,13 @@ class ServiceFactory:
     
     def get_database_connection(self):
         """Get database connection (not cached - creates new connections)"""
-        from .database import get_db_connection
+        from ..data.database import get_db_connection
         return get_db_connection()
     
     def initialize_database(self):
         """Initialize database (idempotent)"""
         if not self._initialized.get('database', False):
-            from .database import init_db
+            from ..data.database import init_db
             init_db()
             self._initialized['database'] = True
             self.logger.info("Database initialized")
@@ -163,7 +163,7 @@ class ServiceFactory:
     def get_reddit_monitor(self):
         """Get enhanced Reddit monitor"""
         if 'reddit_monitor' not in self._services:
-            from ..monitoring.enhanced_reddit_monitor import EnhancedRedditMonitor
+            from ...monitoring.enhanced_reddit_monitor import EnhancedRedditMonitor
             self._services['reddit_monitor'] = EnhancedRedditMonitor()
             self.logger.debug("Reddit monitor initialized")
         

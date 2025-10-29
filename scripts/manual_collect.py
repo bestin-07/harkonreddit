@@ -27,7 +27,7 @@ except ImportError:
 
 from stockhark.sentiment_analyzer import EnhancedSentimentAnalyzer
 from stockhark.core.validator import StockValidator
-from stockhark.core.database import init_db, add_stock_data, get_top_stocks, get_database_stats
+from stockhark.core.data import init_db, add_stock_data, get_top_stocks, get_database_stats
 
 def manual_data_collection(duration_minutes=15, posts_per_subreddit=20):
     """
@@ -45,7 +45,7 @@ def manual_data_collection(duration_minutes=15, posts_per_subreddit=20):
         print("   ✅ Database ready")
         
         # Initialize components using ServiceFactory
-        from stockhark.core.service_factory import create_standard_components
+        from stockhark.core.services.service_factory import create_standard_components
         reddit, sentiment_analyzer, stock_validator = create_standard_components(enable_finbert=False)
         print("   ✅ All components ready")
         

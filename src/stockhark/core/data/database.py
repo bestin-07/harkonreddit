@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from contextlib import contextmanager
 from typing import List, Dict, Optional, Any, Tuple
 try:
-    from ..config import DATABASE_PATH
+    from ...config import DATABASE_PATH
 except ImportError:
     from config import DATABASE_PATH
 

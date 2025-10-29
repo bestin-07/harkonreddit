@@ -16,8 +16,8 @@ Usage:
     from stockhark.sentiment_analyzer import get_enhanced_analyzer
 """
 
-# Core imports for external use
-from .database import (
+# Core imports for external use - now organized by functionality
+from .data import (
     init_db,
     get_db_connection,
     get_top_stocks,
@@ -25,16 +25,25 @@ from .database import (
     add_stock_data,
     add_stock_data_batch,
     get_recent_activity,
-    get_trending_stocks,
-    get_database_stats,
     add_subscriber,
-    get_active_subscribers
+    get_active_subscribers,
+    get_database_stats
 )
 from .validator import (
     StockValidator,
     create_stock_validator,
     validate_stock_symbols,
     is_valid_stock_symbol
+)
+from .services import (
+    ServiceFactory,
+    get_service_factory,
+    BackgroundDataCollector,
+    start_background_collection,
+    stop_background_collection
+)
+from .clients import (
+    get_reddit_client
 )
 
 # Note: FinBERT functionality is now available through the sentiment module
@@ -54,16 +63,25 @@ __all__ = [
     'add_stock_data',
     'add_stock_data_batch',
     'get_recent_activity',
-    'get_trending_stocks',
-    'get_database_stats',
     'add_subscriber',
     'get_active_subscribers',
+    'get_database_stats',
     
     # Stock Validation
     'StockValidator',
     'create_stock_validator',
     'validate_stock_symbols', 
     'is_valid_stock_symbol',
+    
+    # Services
+    'ServiceFactory',
+    'get_service_factory',
+    'BackgroundDataCollector',
+    'start_background_collection',
+    'stop_background_collection',
+    
+    # External API Clients
+    'get_reddit_client',
 ]
 
 # Note: Enhanced sentiment analysis is now available through:

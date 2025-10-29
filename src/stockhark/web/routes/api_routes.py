@@ -8,9 +8,9 @@ import threading
 import time
 from datetime import datetime
 
-from ...core.database import get_database_stats, get_top_stocks, get_db_connection, add_stock_data
-from ...core.background_collector import get_collection_status, force_collection, collect_stock_data
-from ...core.service_factory import get_service_factory
+from ...core.data import get_database_stats, get_top_stocks, get_db_connection, add_stock_data
+from ...core.services.background_collector import get_collection_status, force_collection, collect_stock_data
+from ...core.services.service_factory import get_service_factory
 
 # Create blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')

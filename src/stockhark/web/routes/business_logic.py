@@ -10,8 +10,8 @@ from datetime import datetime
 from flask import render_template
 from flask_mail import Message
 
-from ...core.database import add_stock_data, get_top_stocks, get_active_subscribers
-from ...core.service_factory import get_service_factory
+from ...core.data import add_stock_data, get_top_stocks, get_active_subscribers
+from ...core.services.service_factory import get_service_factory
 
 # Get service factory instance
 factory = get_service_factory()
@@ -138,7 +138,7 @@ def run_periodic_monitoring():
             monitor_stocks()
             
             # Show current stats
-            from ...core.database import get_database_stats
+            from ...core.data import get_database_stats
             stats = get_database_stats()
             print(f"📊 Database: {stats['total_mentions']} mentions, {stats['unique_stocks']} unique stocks")
             
