@@ -11,3 +11,7 @@ Werkzeug==2.3.7
 torch>=1.9.0
 transformers>=4.20.0
 numpy>=1.21.0
+
+# AI-Powered Stock Validation (Optional)
+# Install with: pip install spacy && python -m spacy download en_core_web_sm
+spacy>=3.4.0

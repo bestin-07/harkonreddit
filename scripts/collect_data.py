@@ -28,7 +28,7 @@ except ImportError:
     pass
 
 from stockhark.sentiment_analyzer import EnhancedSentimentAnalyzer
-from stockhark.core.validator import StockValidator
+from stockhark.core.validators.stock_validator import StockValidator
 from stockhark.core.data import init_db, add_stock_data, get_top_stocks, get_database_stats
 from stockhark.core.services.sentiment_aggregator import get_sentiment_aggregator, SentimentMention
 from stockhark.core.services.service_factory import create_standard_components

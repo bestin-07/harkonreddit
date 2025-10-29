@@ -12,7 +12,7 @@ Key Components:
 Usage:
     from stockhark.core import init_db
     from stockhark.core.database import get_top_stocks
-    from stockhark.core.validator import StockValidator
+    from stockhark.core.validators.stock_validator import StockValidator
     from stockhark.sentiment_analyzer import get_enhanced_analyzer
 """
 
@@ -29,7 +29,7 @@ from .data import (
     get_active_subscribers,
     get_database_stats
 )
-from .validator import (
+from .validators.stock_validator import (
     StockValidator,
     create_stock_validator,
     validate_stock_symbols,

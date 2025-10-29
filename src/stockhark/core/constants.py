@@ -369,7 +369,17 @@ FEATURE_FLAGS: Dict[str, bool] = {
     'ENABLE_HEALTH_CHECKS': True,     # System health monitoring
     'ENABLE_PERFORMANCE_METRICS': False,  # Performance monitoring
     'ENABLE_DEBUG_MODE': False,       # Debug information display
+    'ENABLE_AI_VALIDATOR': True,     # AI-powered stock validation (requires spaCy)
 }
+
+# ==============================================================================
+# AI VALIDATOR CONFIGURATION
+# ==============================================================================
+
+# AI Validator settings (used when ENABLE_AI_VALIDATOR is True)
+AI_VALIDATOR_MODEL: str = "en_core_web_sm"  # spaCy model for NER
+AI_VALIDATOR_MIN_CONFIDENCE: float = 0.5    # Minimum confidence threshold
+AI_VALIDATOR_COMBINE_MODE: str = "union"    # How to combine with current validator ("union", "intersection", "ai_priority")
 
 # ==============================================================================
 # PERFORMANCE TUNING

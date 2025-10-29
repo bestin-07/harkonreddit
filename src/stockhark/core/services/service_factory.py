@@ -118,7 +118,7 @@ class ServiceFactory:
         key = f'stock_validator_{folder_path}_{is_silent}'
         
         if key not in self._services:
-            from ..validator import StockValidator
+            from ..validators.stock_validator import StockValidator
             
             # Resolve relative paths
             if not os.path.isabs(folder_path):
@@ -136,6 +136,63 @@ class ServiceFactory:
             self.logger.debug(f"Stock validator initialized with {len(self._services[key].all_symbols)} symbols (path: {folder_path})")
         
         return self._services[key]
+    
+    def get_hybrid_validator(self, json_folder_path: Optional[str] = None, silent: Optional[bool] = None):
+        """
+        Get hybrid validator (combines current + AI validators)
+        Falls back to current validator if AI is disabled or unavailable
+        """
+        from ..constants import FEATURE_FLAGS, AI_VALIDATOR_MODEL, AI_VALIDATOR_MIN_CONFIDENCE, AI_VALIDATOR_COMBINE_MODE
+        
+        ai_enabled = FEATURE_FLAGS.get('ENABLE_AI_VALIDATOR', False)
+        
+        # Create cache key
+        folder_path = json_folder_path or self.config.json_folder_path
+        is_silent = silent if silent is not None else self.config.validator_silent
+        key = f'hybrid_validator_{folder_path}_{is_silent}_{ai_enabled}'
+        
+        if key not in self._services:
+            if ai_enabled:
+                try:
+                    from ..validators.hybrid_validator import HybridStockValidator
+                    
+                    # Initialize hybrid validator with AI capabilities
+                    self._services[key] = HybridStockValidator(
+                        ai_model=AI_VALIDATOR_MODEL,
+                        ai_enabled=True,
+                        ai_min_confidence=AI_VALIDATOR_MIN_CONFIDENCE,
+                        combine_mode=AI_VALIDATOR_COMBINE_MODE
+                    )
+                    
+                    validator_type = "hybrid (AI + current)"
+                    if not self._services[key].ai_available:
+                        validator_type = "hybrid (current only - AI unavailable)"
+                    
+                    self.logger.info(f"Hybrid validator initialized: {validator_type}")
+                    
+                except ImportError as e:
+                    # Fallback to current validator if hybrid is not available
+                    self.logger.warning(f"Hybrid validator unavailable, using current validator: {e}")
+                    self._services[key] = self.get_stock_validator(json_folder_path, silent)
+                    
+            else:
+                # AI disabled - use current validator
+                self._services[key] = self.get_stock_validator(json_folder_path, silent)
+                self.logger.debug("AI validator disabled, using current validator")
+        
+        return self._services[key]
+    
+    def get_validator(self, json_folder_path: Optional[str] = None, silent: Optional[bool] = None):
+        """
+        Get the best available validator (hybrid if AI enabled, current otherwise)
+        This is the recommended method for getting a validator
+        """
+        from ..constants import FEATURE_FLAGS
+        
+        if FEATURE_FLAGS.get('ENABLE_AI_VALIDATOR', False):
+            return self.get_hybrid_validator(json_folder_path, silent)
+        else:
+            return self.get_stock_validator(json_folder_path, silent)
     
     def get_database_connection(self):
         """Get database connection (not cached - creates new connections)"""
@@ -193,7 +250,7 @@ class ServiceFactory:
         # Create components
         reddit_client = self.get_reddit_client()
         sentiment_analyzer = self.get_sentiment_analyzer(enable_finbert=finbert_enabled)
-        stock_validator = self.get_stock_validator()
+        stock_validator = self.get_validator()  # Use best available validator (hybrid if AI enabled)
         
         self.logger.info("Standard components created successfully")
         

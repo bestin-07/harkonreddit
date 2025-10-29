@@ -98,7 +98,7 @@ class BackgroundDataCollector:
         try:
             # Import here to avoid circular imports
             from ...sentiment_analyzer import EnhancedSentimentAnalyzer
-            from ..validator import StockValidator
+            from ..validators.stock_validator import StockValidator
             from ..clients.reddit_client import get_reddit_client
             from ..data.database import add_stock_data
             from ...config import DATA_DIR
