@@ -226,6 +226,7 @@ def get_top_stocks(limit: int = 10, hours: int = 24,
                 
             FROM stock_data 
             WHERE timestamp >= ? 
+            AND symbol NOT IN ('ON', 'ANY', 'TECH', 'REAL', 'NEXT', 'GO', 'OPEN', 'MOVE', 'GOOD', 'CAN', 'GPUS', 'ASST')
             GROUP BY symbol
             HAVING COUNT(*) >= ? AND COUNT(DISTINCT COALESCE(post_url, source)) >= ?
             ORDER BY 
