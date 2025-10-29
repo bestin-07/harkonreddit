@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Enhanced Reddit Monitor with Extended Subreddit Coverage
+RedditMonitor with Extended Subreddit Coverage
 Monitors a comprehensive list of financial subreddits for global stock coverage
 """
 
@@ -10,7 +10,7 @@ import os
 import re
 from ..core.clients.reddit_client import get_reddit_client
 
-class EnhancedRedditMonitor:
+class RedditMonitor:
     """Enhanced Reddit API monitor with broader subreddit coverage"""
     
     def __init__(self):
@@ -211,16 +211,5 @@ class EnhancedRedditMonitor:
         stats['total'] = total_subs
         return stats
 
-# Backward compatibility - replace the old RedditMonitor
-class RedditMonitor(EnhancedRedditMonitor):
-    """Backward compatible Reddit monitor"""
-    
-    def get_hot_posts(self, subreddits, limit=100):
-        """Legacy method for backward compatibility"""
-        if isinstance(subreddits, list):
-            # Use the enhanced method but filter to specific subreddits
-            all_posts = self.get_enhanced_hot_posts(['primary_us', 'trading'], limit=limit)
-            filtered_posts = [post for post in all_posts if post['subreddit'] in subreddits]
-            return filtered_posts
-        else:
-            return self.get_enhanced_hot_posts(['primary_us'], limit=limit)
+# Legacy alias for backward compatibility
+EnhancedRedditMonitor = RedditMonitor

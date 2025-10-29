@@ -2,10 +2,10 @@ import praw
 from datetime import datetime, timedelta
 import os
 
-# Import enhanced monitor
-from .enhanced_reddit_monitor import EnhancedRedditMonitor
+# Import Reddit monitor
+from .reddit_monitor import RedditMonitor as BaseRedditMonitor
 
-class RedditMonitor(EnhancedRedditMonitor):
+class RedditMonitor(BaseRedditMonitor):
     """Handles Reddit API interactions to fetch stock-related posts"""
     
     def __init__(self):

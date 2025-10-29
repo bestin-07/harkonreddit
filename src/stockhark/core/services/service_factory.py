@@ -164,10 +164,10 @@ class ServiceFactory:
         return self._services['background_collector']
     
     def get_reddit_monitor(self):
-        """Get enhanced Reddit monitor"""
+        """Get Reddit monitor"""
         if 'reddit_monitor' not in self._services:
-            from ...monitoring.enhanced_reddit_monitor import EnhancedRedditMonitor
-            self._services['reddit_monitor'] = EnhancedRedditMonitor()
+            from ...monitoring.reddit_monitor import RedditMonitor
+            self._services['reddit_monitor'] = RedditMonitor()
             self.logger.debug("Reddit monitor initialized")
         
         return self._services['reddit_monitor']

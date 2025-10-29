@@ -1,316 +1,322 @@
 #!/usr/bin/env python3
 """
-Real Data Collection for StockHark
-Populate database with actual Reddit data using enhanced monitoring
+StockHark Data Collection Script
+Combines database cleanup and fresh Reddit data collection with enhanced sentiment methodology
 """
 
 import os
 import sys
-from datetime import datetime, timedelta
 import time
-import threading
+import praw
+import sqlite3
+from datetime import datetime, timedelta
+from pathlib import Path
+from collections import defaultdict
 
-# Load environment
+# Setup script environment using centralized utility  
+src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(src_dir))
+
+from stockhark.core.path_utils import setup_script_environment
+setup_script_environment()
+
+# Load environment variables
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
-from reddit_monitor import RedditMonitor
-from fast_stock_validator import OptimizedSentimentAnalyzer
-from database import init_db, add_stock_data, get_top_stocks, get_database_stats
+from stockhark.sentiment_analyzer import EnhancedSentimentAnalyzer
+from stockhark.core.validator import StockValidator
+from stockhark.core.data import init_db, add_stock_data, get_top_stocks, get_database_stats
+from stockhark.core.services.sentiment_aggregator import get_sentiment_aggregator, SentimentMention
+from stockhark.core.services.service_factory import create_standard_components
+from stockhark.config import DATABASE_PATH
 
-def show_spinner(message, stop_event):
-    """Show a spinner while processing"""
-    spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-    i = 0
-    while not stop_event.is_set():
-        print(f'\r{spinner_chars[i % len(spinner_chars)]} {message}', end='', flush=True)
-        time.sleep(0.1)
-        i += 1
-    print('\r' + ' ' * (len(message) + 2) + '\r', end='', flush=True)  # Clear the line
+def cleanup_database():
+    """Clean the database by removing old entries and invalid stock symbols"""
+    print("🧹 Starting database cleanup...")
+    
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        # Get initial stats
+        cursor.execute("SELECT COUNT(*) FROM stock_data")
+        initial_count = cursor.fetchone()[0]
+        
+        # Remove entries older than 30 days
+        cutoff_date = datetime.now() - timedelta(days=30)
+        cursor.execute("DELETE FROM stock_data WHERE timestamp < ?", (cutoff_date,))
+        old_entries_removed = cursor.rowcount
+        
+        # Remove entries with very low confidence (< 0.3)
+        cursor.execute("DELETE FROM stock_data WHERE confidence < 0.3")
+        low_confidence_removed = cursor.rowcount
+        
+        # Remove single-character symbols (likely false positives)
+        cursor.execute("DELETE FROM stock_data WHERE LENGTH(symbol) = 1")
+        single_char_removed = cursor.rowcount
+        
+        # Vacuum to reclaim space
+        cursor.execute("VACUUM")
+        
+        conn.commit()
+        conn.close()
+        
+        total_removed = old_entries_removed + low_confidence_removed + single_char_removed
+        print(f"   ✅ Cleanup complete:")
+        print(f"   📊 Initial entries: {initial_count}")
+        print(f"   🗑️  Old entries removed: {old_entries_removed}")
+        print(f"   🗑️  Low confidence removed: {low_confidence_removed}")
+        print(f"   🗑️  Single-char symbols removed: {single_char_removed}")
+        print(f"   📊 Total entries removed: {total_removed}")
+        print(f"   📊 Remaining entries: {initial_count - total_removed}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"   ❌ Cleanup error: {e}")
+        return False
 
-def collect_real_data(duration_minutes=30, max_posts_per_category=50):
-    """
-    Collect real Reddit data for specified duration
+def collect_fresh_data(duration_minutes: int = 10, posts_per_subreddit: int = 15):
+    """Collect fresh Reddit data using enhanced sentiment methodology"""
+    print(f"🔍 Starting fresh data collection...")
+    print(f"   Duration: {duration_minutes} minutes")
+    print(f"   Posts per subreddit: {posts_per_subreddit}")
     
-    Args:
-        duration_minutes: How long to collect data
-        max_posts_per_category: Max posts to collect per subreddit category
-    """
-    print("🚀 StockHark Real Data Collection")
-    print("=" * 60)
+    try:
+        # Initialize components
+        print("⏳ Initializing components...")
+        reddit, sentiment_analyzer, stock_validator = create_standard_components()
+        print("   ✅ All components ready")
+        
+    except Exception as e:
+        print(f"❌ Initialization error: {e}")
+        return False
     
-    # Show initialization progress
-    print("⏳ Initializing components...")
-    print("   🔧 Setting up database connection...")
-    time.sleep(0.5)  # Brief pause for visibility
-    
-    # Initialize components with progress indicators
-    init_db()
-    print("   ✅ Database initialized")
-    
-    # Reddit monitor with spinner
-    stop_event = threading.Event()
-    spinner_thread = threading.Thread(target=show_spinner, args=("Connecting to Reddit API...", stop_event))
-    spinner_thread.start()
-    
-    reddit_monitor = RedditMonitor()
-    
-    stop_event.set()
-    spinner_thread.join()
-    print("   ✅ Reddit monitor ready")
-    
-    # Sentiment analyzer with spinner
-    stop_event = threading.Event()
-    spinner_thread = threading.Thread(target=show_spinner, args=("Loading sentiment analyzer & stock validator...", stop_event))
-    spinner_thread.start()
-    
-    sentiment_analyzer = OptimizedSentimentAnalyzer()  # Ultra-fast validation with JSON files
-    
-    stop_event.set()
-    spinner_thread.join()
-    print("   ✅ Sentiment analyzer with fast stock validation ready")
-    
-    # Show configuration
-    print(f"\n📋 Collection Configuration:")
-    print(f"   ⏱️  Duration: {duration_minutes} minutes")
-    print(f"   📊 Max Posts per Category: {max_posts_per_category}")
-    
-    # Show subreddit stats
-    print("   🔍 Loading subreddit configuration...")
-    stats = reddit_monitor.get_subreddit_stats()
-    print(f"   📡 Monitoring {stats['total']} subreddits across {len(stats)-1} categories")
-    
-    print(f"\n🌍 Starting real data collection...")
-    print(f"⚠️  This will use your Reddit API quota - be mindful of rate limits")
-    print("💡 You can press Ctrl+C anytime to stop collection gracefully")
-    print("🔄 Progress will be shown in real-time...")
+    # Show current database stats
+    initial_stats = get_database_stats()
+    print(f"\n📊 Current Database Status:")
+    print(f"   Total mentions: {initial_stats['total_mentions']}")
+    print(f"   Unique stocks: {initial_stats['unique_stocks']}")
     
     start_time = datetime.now()
     end_time = start_time + timedelta(minutes=duration_minutes)
     
     total_posts_processed = 0
     total_stocks_found = 0
-    category_stats = {}
+    new_mentions_added = 0
     
-    # Define categories to collect from
-    categories = [
-        ('primary_us', 'US Markets'),
-        ('european', 'European Markets'),
-        ('trading', 'Trading & Options'),
-        ('tech_focused', 'Technology Stocks'),
-        ('commodities', 'Commodities & Energy')
+    # Initialize enhanced sentiment aggregation system
+    aggregator = get_sentiment_aggregator()
+    all_mentions = []  # Collect all mentions for batch aggregation
+    
+    # Focus on most active financial subreddits
+    priority_subreddits = [
+        'wallstreetbets', 'stocks', 'investing', 'pennystocks',
+        'options', 'thetagang', 'StockMarket', 'daytrading'
     ]
     
     try:
-        for category_key, category_name in categories:
+        for subreddit_name in priority_subreddits:
             if datetime.now() >= end_time:
-                print(f"\n⏰ Collection time limit reached")
+                print(f"⏰ Time limit reached")
                 break
                 
-            print(f"\n📈 Collecting from {category_name}...")
-            print(f"   🔍 Fetching up to {max_posts_per_category} posts...")
+            print(f"\n📈 Processing r/{subreddit_name}...")
             
             try:
-                # Get posts from this category
-                posts = reddit_monitor.get_enhanced_hot_posts(
-                    categories=[category_key],
-                    limit=max_posts_per_category
-                )
-                print(f"   ✅ Retrieved {len(posts)} posts from {category_name}")
+                # Get posts directly with PRAW
+                subreddit = reddit.subreddit(subreddit_name)
+                posts = list(subreddit.hot(limit=posts_per_subreddit))
                 
-                posts_processed = 0
-                stocks_found = 0
+                print(f"   📥 Retrieved {len(posts)} posts")
                 
-                print(f"   🔬 Analyzing posts for stock mentions...")
+                subreddit_stocks = 0
                 
-                for i, post in enumerate(posts[:max_posts_per_category], 1):
-                    # Extract full text for analysis
-                    full_text = post['title'] + ' ' + post.get('content', '')
+                for i, post in enumerate(posts, 1):
+                    # Skip stickied posts
+                    if post.stickied:
+                        continue
                     
-                    # Add top comments for better context
-                    if post.get('comments'):
-                        comment_text = ' '.join(post['comments'][:3])  # Top 3 comments
-                        full_text += ' ' + comment_text
+                    # Create full text for analysis
+                    full_text = post.title
+                    if hasattr(post, 'selftext') and post.selftext:
+                        full_text += ' ' + post.selftext
                     
-                    # Extract stock symbols
-                    stocks = sentiment_analyzer.extract_and_validate_symbols(full_text)
+                    # Extract and validate stock symbols
+                    valid_symbols = stock_validator.extract_and_validate(full_text)
                     
-                    # Show progress every 10 posts
-                    if i % 10 == 0:
-                        print(f"   📊 Progress: {i}/{len(posts)} posts analyzed, {stocks_found} stocks found so far")
-                    
-                    if stocks:
-                        print(f"   🎯 r/{post['subreddit']}: Found {len(stocks)} stocks → {', '.join(stocks)}")
-                        print(f"      📰 '{post['title'][:60]}...' ({post['score']} ⬆️)")
+                    if valid_symbols:
+                        print(f"   🎯 Post {i}: Found {len(valid_symbols)} stocks → {', '.join(valid_symbols)}")
+                        print(f"      📰 '{post.title[:50]}...' ({post.score} ⬆️)")
                         
-                        for stock in stocks:
-                            # Get context-aware sentiment
-                            sentiment = sentiment_analyzer.get_stock_context_sentiment(full_text, stock)
-                            
-                            # Store in database
-                            add_stock_data(
-                                symbol=stock,
-                                sentiment=sentiment['score'],
-                                sentiment_label=sentiment['label'],
-                                mentions=1,
-                                source=f"reddit/r/{post['subreddit']}",
-                                post_url=post['url'],
-                                timestamp=post.get('created_utc', datetime.now())
+                        # Get raw sentiment score (Step 1: FinBERT Analysis) 
+                        underlying_analyzer = sentiment_analyzer._analyzer
+                        raw_sentiment = underlying_analyzer.analyze_sentiment(
+                            full_text, 
+                            timestamp=None,  # We'll pass timestamp separately
+                            apply_time_decay=False  # We handle time decay in aggregation
+                        )
+                        
+                        # Create mentions for each symbol in this post (for aggregation)
+                        post_timestamp = datetime.fromtimestamp(post.created_utc)
+                        post_source = f"reddit/r/{subreddit_name}"
+                        post_url = f"https://reddit.com{post.permalink}"
+                        
+                        for symbol in valid_symbols:
+                            mention = SentimentMention(
+                                symbol=symbol,
+                                raw_sentiment=raw_sentiment,
+                                timestamp=post_timestamp,
+                                source=post_source,
+                                text=full_text,
+                                post_url=post_url
                             )
+                            all_mentions.append(mention)
+                            subreddit_stocks += 1
                             
-                            stocks_found += 1
-                            
-                            # Show individual stock saves for important ones
-                            if stock in ['BYND', 'TSLA', 'NVDA', 'META', 'AAPL']:
-                                print(f"      💎 Saved ${stock} mention: {sentiment['label']} ({sentiment['score']:+.3f})")
-                        
-                        # Small delay to be respectful to Reddit API
-                        time.sleep(0.1)
+                            # Show important stock mentions (preview with raw sentiment)
+                            if symbol in ['TSLA', 'AAPL', 'NVDA', 'META', 'GOOGL', 'MSFT', 'GME', 'AMC', 'PLTR', 'NIO']:
+                                sentiment_emoji = "🟢" if raw_sentiment > 0.1 else "🔴" if raw_sentiment < -0.1 else "⚪"
+                                print(f"      💎 ${symbol} {sentiment_emoji} raw sentiment ({raw_sentiment:+.3f})")
                     
-                    posts_processed += 1
+                    total_posts_processed += 1
+                    
+                    # Show progress every 5 posts
+                    if i % 5 == 0:
+                        print(f"   📊 Progress: {i}/{len(posts)} posts, {subreddit_stocks} stocks found")
                     
                     # Check time limit
                     if datetime.now() >= end_time:
                         break
+                        
+                    # Small delay to be respectful to Reddit
+                    time.sleep(0.2)
                 
-                category_stats[category_name] = {
-                    'posts': posts_processed,
-                    'stocks': stocks_found
-                }
+                total_stocks_found += subreddit_stocks
+                print(f"   ✅ r/{subreddit_name} complete: {len(posts)} posts → {subreddit_stocks} stock mentions")
                 
-                total_posts_processed += posts_processed
-                total_stocks_found += stocks_found
-                
-                print(f"   ✅ {category_name} COMPLETE: {posts_processed} posts → {stocks_found} stock mentions")
-                print(f"   📊 Running Total: {total_posts_processed} posts, {total_stocks_found} stock mentions")
-                
-                # Brief pause between categories
-                print(f"   ⏳ Pausing 3 seconds before next category...")
+                # Pause between subreddits
                 time.sleep(3)
                 
             except Exception as e:
-                print(f"   ❌ Error in {category_name}: {e}")
+                print(f"   ❌ Error processing r/{subreddit_name}: {e}")
                 continue
     
     except KeyboardInterrupt:
         print(f"\n⏹️  Collection stopped by user")
-        print(f"📊 Partial results: {total_posts_processed} posts, {total_stocks_found} stocks found")
+    
+    # Apply Steps 2-5: Time Decay, Source Weighting, Symbol Penalties, Post Count Boost, Normalization
+    if all_mentions:
+        print(f"\n🧠 Applying enhanced sentiment methodology to {len(all_mentions)} mentions...")
+        
+        # Group mentions by stock symbol for aggregation
+        stock_mentions = defaultdict(list)
+        for mention in all_mentions:
+            stock_mentions[mention.symbol].append(mention)
+        
+        print(f"   📊 Found {len(stock_mentions)} unique stocks for aggregation")
+        
+        # Create descriptive source string from subreddits processed
+        processed_subreddits = sorted(set(priority_subreddits))
+        source_description = f"reddit/r/{'+'.join(processed_subreddits)}"
+        
+        # Process each stock with full methodology
+        for symbol, mentions in stock_mentions.items():
+            try:
+                # Apply full 5-step methodology with all enhancements
+                aggregated_result = aggregator.aggregate_stock_sentiment(mentions)
+                
+                # Add aggregated result to database with descriptive source
+                add_stock_data(
+                    symbol=symbol,
+                    sentiment=aggregated_result.final_sentiment,
+                    sentiment_label=aggregated_result.sentiment_label,
+                    confidence=aggregated_result.confidence,
+                    mentions=aggregated_result.total_mentions,
+                    source=source_description,  # Shows which subreddits were analyzed
+                    post_url=None,  # Aggregated data doesn't have single URL
+                    timestamp=datetime.now()
+                )
+                
+                new_mentions_added += aggregated_result.total_mentions
+                
+                # Show enhanced results for important stocks
+                if symbol in ['TSLA', 'AAPL', 'NVDA', 'META', 'GOOGL', 'MSFT', 'GME', 'AMC', 'PLTR', 'NIO']:
+                    emoji = "🟢" if aggregated_result.sentiment_label == 'bullish' else "🔴" if aggregated_result.sentiment_label == 'bearish' else "⚪"
+                    print(f"   💎 ${symbol:6} {emoji} {aggregated_result.sentiment_label} ({aggregated_result.final_sentiment:+.3f}) | {len(mentions)} mentions across {len(set(m.post_url for m in mentions))} posts")
+                    
+            except Exception as e:
+                print(f"   ❌ Error aggregating {symbol}: {e}")
+        
+        print(f"   ✅ Enhanced methodology applied to all stocks")
     
     # Final results
     actual_duration = (datetime.now() - start_time).total_seconds() / 60
-    print(f"\n" + "=" * 60)
-    print(f"📊 Real Data Collection Results:")
+    print(f"\n" + "=" * 50)
+    print(f"📊 Collection Results with Enhanced Methodology:")
     print(f"   Duration: {actual_duration:.1f} minutes")
     print(f"   Posts processed: {total_posts_processed}")
-    print(f"   Stock mentions collected: {total_stocks_found}")
+    print(f"   Stock mentions found: {total_stocks_found}")
+    print(f"   Enhanced aggregations added: {new_mentions_added}")
     
-    print(f"\n📈 Category Breakdown:")
-    for category, stats in category_stats.items():
-        print(f"   {category}: {stats['posts']} posts → {stats['stocks']} mentions")
-    
-    # Show database statistics
-    db_stats = get_database_stats()
-    print(f"\n💾 Database Status:")
-    print(f"   Total mentions: {db_stats['total_mentions']}")
-    print(f"   Unique stocks: {db_stats['unique_stocks']}")
-    print(f"   Active subscribers: {db_stats['active_subscribers']}")
+    # Show updated database stats
+    final_stats = get_database_stats()
+    mentions_added = final_stats['total_mentions'] - initial_stats['total_mentions']
+    print(f"\n💾 Updated Database Status:")
+    print(f"   Total mentions: {final_stats['total_mentions']} (+{mentions_added})")  
+    print(f"   Unique stocks: {final_stats['unique_stocks']}")
+    print(f"   Database size: {final_stats['database_size_mb']:.2f} MB")
     
     # Show current top stocks
-    print(f"\n🔥 Current Top 10 Stocks:")
+    print(f"\n🔥 Current Top 10 Trending Stocks:")
     top_stocks = get_top_stocks(limit=10, hours=24)
     
     if top_stocks:
         for i, stock in enumerate(top_stocks, 1):
-            emoji = "🟢" if stock['overall_sentiment'] == 'bullish' else "🔴" if stock['overall_sentiment'] == 'bearish' else "⚪"
-            print(f"   {i:2}. ${stock['symbol']:<8} {emoji} {stock['mentions']:3} mentions | {stock['avg_sentiment']:+.3f}")
+            sentiment_emoji = "🟢" if stock['overall_sentiment'] == 'bullish' else "🔴" if stock['overall_sentiment'] == 'bearish' else "⚪"
+            print(f"   {i:2}. ${stock['symbol']:<6} {sentiment_emoji} {stock['total_mentions']:3} mentions | {stock['avg_sentiment']:+.3f} sentiment")
     else:
-        print("   No stocks found (this is normal for first run)")
+        print("   No recent stock mentions found")
     
-    print(f"\n✅ Real data collection completed!")
-    print(f"🌐 Visit http://localhost:5000 to see your live data")
+    print(f"\n✅ Data collection completed!")
+    print(f"🌐 Your StockHark app now has the latest data!")
     
-    return total_stocks_found > 0
+    return new_mentions_added > 0
 
-def quick_real_data_test():
-    """Quick test with real Reddit data (5 minutes)"""
-    print("⚡ Quick Real Data Test")
-    print("=" * 40)
+def main():
+    """Main function - runs cleanup then data collection"""
+    print("🚀 StockHark - Data Collection Tool")
+    print("=" * 50)
     
-    return collect_real_data(duration_minutes=5, max_posts_per_category=10)
-
-def full_real_data_collection():
-    """Full data collection (30 minutes)"""
-    print("🌍 Full Real Data Collection")
-    print("=" * 40)
-    
-    return collect_real_data(duration_minutes=30, max_posts_per_category=50)
-
-def continuous_monitoring():
-    """Continuous monitoring (runs until stopped)"""
-    print("🔄 Continuous Real Data Monitoring")
-    print("=" * 40)
-    print("Press Ctrl+C to stop\n")
-    
-    try:
-        while True:
-            print(f"📅 Collection cycle starting at {datetime.now().strftime('%H:%M:%S')}")
-            collect_real_data(duration_minutes=15, max_posts_per_category=25)
-            
-            print(f"\n⏳ Waiting 10 minutes before next cycle...")
-            time.sleep(600)  # Wait 10 minutes
-            
-    except KeyboardInterrupt:
-        print(f"\n⏹️  Continuous monitoring stopped")
-
-if __name__ == "__main__":
-    print("🌍 StockHark Real Data Collection")
-    print("=" * 60)
-    
-    # Check environment setup
+    # Check Reddit API setup
     if not os.getenv('REDDIT_CLIENT_ID') or os.getenv('REDDIT_CLIENT_ID') == 'your-client-id':
-        print("❌ Reddit API credentials not configured!")
-        print("📝 Please add your credentials to the .env file:")
-        print("   REDDIT_CLIENT_ID=your_actual_client_id")
-        print("   REDDIT_CLIENT_SECRET=your_actual_client_secret")
-        print("   REDDIT_USER_AGENT=StockHark/1.0 by YourUsername")
+        print("❌ Reddit API not configured!")
+        print("📝 Please set up your Reddit API credentials in .env file")
         sys.exit(1)
     
-    print("\nReal Data Collection Options:")
-    print("1. Quick test (5 minutes, 10 posts per category)")
-    print("2. Full collection (30 minutes, 50 posts per category)")  
-    print("3. Continuous monitoring (runs until stopped)")
-    print("4. Custom duration")
+    # Initialize database
+    init_db()
     
-    try:
-        choice = input("\nEnter choice (1-4, default 1): ").strip() or "1"
-        
-        if choice == "1":
-            success = quick_real_data_test()
-        elif choice == "2":
-            success = full_real_data_collection()
-        elif choice == "3":
-            continuous_monitoring()
-            success = True
-        elif choice == "4":
-            duration = int(input("Enter duration in minutes (default 15): ") or "15")
-            max_posts = int(input("Enter max posts per category (default 25): ") or "25")
-            success = collect_real_data(duration, max_posts)
-        else:
-            print("Invalid choice")
-            sys.exit(1)
-        
-        if success:
-            print(f"\n🎉 Success! Your StockHark now has real Reddit data!")
-            print(f"🚀 Start your webapp with: python app.py")
-        else:
-            print(f"\n⚠️  No data collected. Check your Reddit API setup.")
-            
-    except KeyboardInterrupt:
-        print(f"\n\n⏹️  Collection stopped by user")
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
+    # Step 1: Cleanup database
+    cleanup_success = cleanup_database()
+    if not cleanup_success:
+        print("⚠️  Database cleanup failed, but continuing with data collection...")
+    
+    print("\n" + "=" * 50)
+    
+    # Step 2: Collect fresh data
+    collection_success = collect_fresh_data(duration_minutes=10, posts_per_subreddit=15)
+    
+    if collection_success:
+        print(f"\n🎉 Success! Reddit data collected and processed!")
+        print(f"   💡 Run your Flask app to see the latest trends")
+    else:
+        print(f"\n❌ Data collection failed")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
