@@ -14,8 +14,7 @@ from pathlib import Path
 
 from .exceptions import (
     StockHarkException, ErrorSeverity, ConfigurationError, 
-    RedditAPIError, DatabaseError, ValidationError,
-    SentimentAnalysisError, BackgroundServiceError
+    RedditAPIError, DatabaseError, ValidationError
 )
 from .path_utils import get_logs_directory
 

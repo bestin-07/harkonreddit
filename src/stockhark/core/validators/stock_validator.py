@@ -175,35 +175,8 @@ class StockValidator:
                 filtered_symbols.append(symbol)
         
         return filtered_symbols
-    
-    def extract_and_validate_batch(self, texts: List[str], max_symbols_per_text: int = 10) -> List[List[str]]:
-        """
-        Batch process multiple texts for even better performance
-        
-        Args:
-            texts: List of texts to process
-            max_symbols_per_text: Maximum symbols per text
-            
-        Returns:
-            List of symbol lists, one for each input text
-        """
-        results = []
-        
-        for text in texts:
-            # Use the optimized single-text method
-            symbols = self.extract_and_validate(text, max_symbols_per_text)
-            results.append(symbols)
-        
-        return results
-    
-    def get_validator_stats(self) -> Dict[str, int]:
-        """Get validator statistics"""
-        return {
-            'total_symbols': len(self.all_symbols),
-            'nasdaq_symbols': len(self.nasdaq_symbols),
-            'amex_symbols': len(self.amex_symbols),
-            'filter_words': len(self.false_positive_filter)
-        }
+
+    # Removed unused methods: extract_and_validate_batch, get_validator_stats
 
 # Convenience functions for backwards compatibility
 

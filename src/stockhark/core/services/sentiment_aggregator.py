@@ -4,7 +4,7 @@ Implements the full 5-step sentiment methodology as specified in sentiment_metho
 """
 
 import math
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from collections import defaultdict

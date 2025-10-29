@@ -354,33 +354,10 @@ MAX_BATCH_SIZE = 1000
 PROCESSING_TIMEOUT_SECONDS = 120
 
 # ==============================================================================
-# UTILITY FUNCTIONS
+# UTILITY FUNCTIONS (removed unused functions)
 # ==============================================================================
 
-def get_time_window_hours(window_type: str) -> int:
-    """Get hours for different time window types"""
-    windows = {
-        'short': DEFAULT_HOURS_WINDOW,      # 24 hours
-        'medium': 168,                      # 1 week  
-        'long': EXTENDED_HOURS_WINDOW,      # 30 days
-        'max': MAX_HOURS_WINDOW             # 1 year
-    }
-    return windows.get(window_type, DEFAULT_HOURS_WINDOW)
-
-def is_feature_enabled(feature_name: str) -> bool:
-    """Check if a feature flag is enabled"""
-    return FEATURE_FLAGS.get(feature_name, False)
-
-def get_subreddits_by_category(category: str) -> List[str]:
-    """Get subreddits by category name"""
-    categories = {
-        'primary_us': PRIMARY_US_SUBREDDITS,
-        'trading': TRADING_SUBREDDITS,
-        'international': INTERNATIONAL_SUBREDDITS,
-        'european': EUROPEAN_SUBREDDITS,
-        'all': ALL_MONITORED_SUBREDDITS
-    }
-    return categories.get(category, PRIMARY_US_SUBREDDITS)
+# Removed unused: get_time_window_hours, is_feature_enabled, get_subreddits_by_category
 
 # Validation function removed - constants simplified
 
