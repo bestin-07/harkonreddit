@@ -85,4 +85,6 @@ backup*/
 *.temp
 
 # Testing
-/tests
+tests/__pycache__/
+tests/*.db
+*.pytest_cache/

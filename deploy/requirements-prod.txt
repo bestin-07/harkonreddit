@@ -1,8 +1,0 @@
-Flask==2.3.3
-Flask-Mail==0.9.1
-praw==7.7.1
-textblob==0.17.1
-nltk==3.8.1
-requests==2.31.0
-python-dotenv==1.0.0
-Werkzeug==2.3.7

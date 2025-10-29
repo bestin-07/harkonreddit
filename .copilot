@@ -37,7 +37,7 @@ Reddit Hark/
 - **Sentiment Analysis**: TextBlob, NLTK
 - **Email**: Flask-Mail
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Deployment**: PythonAnywhere
+- **Deployment**: Railway
 
 ## Key Components
 
@@ -152,7 +152,7 @@ This ensures:
 
 ## Deployment Notes
 
-### PythonAnywhere
+### Railway
 - Upload files via Files tab
 - Install requirements in Bash console
 - Configure WSGI file

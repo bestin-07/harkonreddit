@@ -295,9 +295,8 @@ def force_collection():
     collector = get_collector()
     collector._collect_data()
 
-def collect_stock_data(duration_minutes: int = 5, posts_per_subreddit: int = 15):
+def collect_stock_data(posts_per_subreddit: int = 15):
     """Manual data collection function"""
     collector = get_collector()
     # Force a collection cycle with specified parameters
     collector._collect_data()
-    # Note: duration_minutes parameter kept for API compatibility

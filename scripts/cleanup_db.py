@@ -138,7 +138,7 @@ def cleanup_database():
     print(f"   1. Your database now contains only valid NASDAQ/AMEX stocks")
     print(f"   2. Future data collection will use fast validation")
     print(f"   3. Run 'python app.py' to see clean results")
-    print(f"   4. Visit http://localhost:5000 for updated dashboard")
+    print(f"   4. Visit your Railway deployment URL for updated dashboard")
     
     return True
 

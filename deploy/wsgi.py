@@ -1,4 +1,4 @@
-# WSGI file for PythonAnywhere deployment
+# WSGI file for Railway deployment (deprecated - use root wsgi.py instead)
 import sys
 import os
 
@@ -7,7 +7,7 @@ project_home = 'C:\Users\antub\OneDrive - ABB\Documents\Bestin Codes\Reddit Hark
 if project_home not in sys.path:
     sys.path = [project_home] + sys.path
 
-# Set environment variables (you can also set these in the PythonAnywhere dashboard)
+# Set environment variables (deprecated - use Railway dashboard instead)
 # Generate a secure secret key: python -c "import secrets; print(secrets.token_hex(32))"
 os.environ['SECRET_KEY'] = 'your-secret-key-change-this-to-something-secure'
 # Get these from https://www.reddit.com/prefs/apps after creating a "script" type app
