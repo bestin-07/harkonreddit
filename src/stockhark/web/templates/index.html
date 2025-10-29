@@ -41,8 +41,18 @@
                 <button class="filter-btn" data-hours="6">6H</button>
                 <button class="filter-btn" data-hours="24">24H</button>
             </div>
-            <div class="last-updated">
-                Last updated: <span id="last-updated-time">{{ now.strftime('%H:%M') }}</span>
+            <div class="control-actions">
+                <button class="force-refresh-btn" onclick="forceDataRefresh()">
+                    <i class="fas fa-sync-alt"></i>
+                    Force Refresh
+                </button>
+                <button class="cancel-refresh-btn" onclick="cancelRefresh()" style="display: none;">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <div class="last-updated">
+                    Last updated: <span id="last-updated-time">{{ now.strftime('%H:%M') }}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -352,6 +362,168 @@ function testStockApi() {
             </div>
         `;
     });
+}
+
+// Global variable to track polling interval
+let currentPollInterval = null;
+
+function forceDataRefresh() {
+    const refreshBtn = document.querySelector('.force-refresh-btn');
+    const cancelBtn = document.querySelector('.cancel-refresh-btn');
+    const btnIcon = refreshBtn.querySelector('i');
+    const btnText = refreshBtn.lastChild;
+    
+    // Show loading state and cancel button
+    refreshBtn.disabled = true;
+    cancelBtn.style.display = 'inline-flex';
+    btnIcon.className = 'fas fa-spinner fa-spin';
+    btnText.textContent = ' Refreshing...';
+    
+    // Store initial data to compare against
+    const initialStocks = Array.from(document.querySelectorAll('.stock-card')).map(card => ({
+        symbol: card.dataset.symbol,
+        mentions: card.querySelector('.mentions-badge').textContent.trim()
+    }));
+    
+    // Trigger immediate background collection
+    fetch('/api/force-collection')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Force refresh response:', data);
+            
+            // Start polling for data updates
+            pollForUpdates(initialStocks, refreshBtn, cancelBtn, btnIcon, btnText);
+        })
+        .catch(error => {
+            console.error('Force refresh failed:', error);
+            
+            // Show error state and hide cancel button
+            cancelBtn.style.display = 'none';
+            btnIcon.className = 'fas fa-exclamation-triangle';
+            btnText.textContent = ' Failed';
+            
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                resetRefreshButton(refreshBtn, cancelBtn, btnIcon, btnText);
+            }, 3000);
+        });
+}
+
+function cancelRefresh() {
+    if (currentPollInterval) {
+        clearInterval(currentPollInterval);
+        currentPollInterval = null;
+    }
+    
+    const refreshBtn = document.querySelector('.force-refresh-btn');
+    const cancelBtn = document.querySelector('.cancel-refresh-btn');
+    const btnIcon = refreshBtn.querySelector('i');
+    const btnText = refreshBtn.lastChild;
+    
+    resetRefreshButton(refreshBtn, cancelBtn, btnIcon, btnText);
+}
+
+function resetRefreshButton(refreshBtn, cancelBtn, btnIcon, btnText) {
+    refreshBtn.disabled = false;
+    cancelBtn.style.display = 'none';
+    btnIcon.className = 'fas fa-sync-alt';
+    btnText.textContent = ' Force Refresh';
+}
+
+function pollForUpdates(initialStocks, refreshBtn, cancelBtn, btnIcon, btnText) {
+    let pollCount = 0;
+    const maxPolls = 60; // Poll for up to 5 minutes (60 * 5 seconds)
+    
+    currentPollInterval = setInterval(() => {
+        pollCount++;
+        
+        // Update loading text to show progress
+        btnText.textContent = ` Collecting data... (${Math.floor(pollCount * 5)}s)`;
+        
+        // Check if we've been polling too long
+        if (pollCount >= maxPolls) {
+            clearInterval(currentPollInterval);
+            currentPollInterval = null;
+            
+            // Show timeout state but keep cancel button
+            btnIcon.className = 'fas fa-clock';
+            btnText.textContent = ' Taking longer than usual...';
+            
+            // Reload anyway after timeout
+            setTimeout(() => {
+                cancelBtn.style.display = 'none';
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+        
+        // Check for new data by fetching stocks API
+        fetch('/api/stocks')
+            .then(response => response.json())
+            .then(currentStocks => {
+                // Check if data has actually changed
+                const hasNewData = checkForDataChanges(initialStocks, currentStocks);
+                
+                if (hasNewData) {
+                    clearInterval(currentPollInterval);
+                    currentPollInterval = null;
+                    
+                    // Hide cancel button and show success state
+                    cancelBtn.style.display = 'none';
+                    btnIcon.className = 'fas fa-check';
+                    btnText.textContent = ' Data Updated!';
+                    
+                    // Update last-updated time
+                    const now = new Date();
+                    document.getElementById('last-updated-time').textContent = 
+                        now.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+                    
+                    // Reload page to show new data after brief success display
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.log('Polling error (normal during collection):', error);
+                // Continue polling even if API temporarily fails
+            });
+    }, 5000); // Poll every 5 seconds
+}
+
+function checkForDataChanges(initialStocks, currentStocks) {
+    // Simple check: compare total number of stocks and mentions
+    if (!currentStocks || currentStocks.length === 0) {
+        return false; // No data yet
+    }
+    
+    // Check if we have more stocks than before
+    if (currentStocks.length > initialStocks.length) {
+        console.log('New stocks detected:', currentStocks.length, 'vs', initialStocks.length);
+        return true;
+    }
+    
+    // Check if mention counts have changed for existing stocks
+    const currentStocksMap = new Map(currentStocks.map(stock => [stock.symbol, stock.mentions]));
+    
+    for (const initialStock of initialStocks) {
+        const currentMentions = currentStocksMap.get(initialStock.symbol);
+        if (currentMentions && currentMentions !== parseInt(initialStock.mentions)) {
+            console.log(`Mention count changed for ${initialStock.symbol}:`, initialStock.mentions, '->', currentMentions);
+            return true;
+        }
+    }
+    
+    // Check for new stocks that weren't in initial data
+    const initialSymbols = new Set(initialStocks.map(s => s.symbol));
+    const hasNewSymbols = currentStocks.some(stock => !initialSymbols.has(stock.symbol));
+    
+    if (hasNewSymbols) {
+        console.log('New symbols detected');
+        return true;
+    }
+    
+    return false;
 }
 </script>
 {% endblock %}

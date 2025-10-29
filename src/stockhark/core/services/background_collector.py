@@ -15,12 +15,12 @@ import logging
 class BackgroundDataCollector:
     """Background data collection service for StockHark"""
     
-    def __init__(self, collection_interval_minutes: int = 30):
+    def __init__(self, collection_interval_minutes: int = 5):
         """
         Initialize background data collector
         
         Args:
-            collection_interval_minutes: Minutes between collection cycles
+            collection_interval_minutes: Minutes between collection cycles (default: 5 for development)
         """
         self.collection_interval = collection_interval_minutes * 60  # Convert to seconds
         self.running = False
@@ -230,7 +230,9 @@ def get_collector() -> BackgroundDataCollector:
     """Get the global collector instance"""
     global _collector
     if _collector is None:
-        _collector = BackgroundDataCollector(collection_interval_minutes=30)
+        # Use environment variable or default to 5 minutes for development
+        interval_minutes = int(os.getenv('STOCKHARK_COLLECTION_INTERVAL', '5'))
+        _collector = BackgroundDataCollector(collection_interval_minutes=interval_minutes)
     return _collector
 
 def start_background_collection():

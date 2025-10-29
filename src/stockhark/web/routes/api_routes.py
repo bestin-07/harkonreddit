@@ -251,3 +251,21 @@ def collect_real_data():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/force-collection')
+def force_background_collection():
+    """Force immediate background collection cycle"""
+    try:
+        # Force an immediate collection without waiting for the timer
+        threading.Thread(target=force_collection, daemon=True).start()
+        
+        # Get current status
+        status = get_collection_status()
+        
+        return jsonify({
+            'status': 'background collection triggered',
+            'message': 'Fresh data collection started immediately',
+            'collection_status': status
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

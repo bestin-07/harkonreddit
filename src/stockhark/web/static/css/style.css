@@ -15,6 +15,10 @@
     --error-color: #f56565;
     --info-color: #4299e1;
     
+    /* Red Colors */
+    --red-600: #e53e3e;
+    --red-700: #c53030;
+    
     /* Sentiment Colors */
     --bullish-color: #38a169;
     --bearish-color: #e53e3e;
@@ -237,6 +241,69 @@ body {
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.control-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.force-refresh-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.force-refresh-btn:hover:not(:disabled) {
+    background: var(--primary-color-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.force-refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.force-refresh-btn i {
+    font-size: 0.9rem;
+}
+
+.cancel-refresh-btn {
+    background: var(--red-600);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    margin-left: 0.5rem;
+}
+
+.cancel-refresh-btn:hover {
+    background: var(--red-700);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.cancel-refresh-btn i {
+    font-size: 0.9rem;
 }
 
 .time-filter {
