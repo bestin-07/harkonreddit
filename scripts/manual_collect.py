@@ -46,7 +46,7 @@ def manual_data_collection(duration_minutes=15, posts_per_subreddit=20):
         
         # Initialize components using ServiceFactory
         from stockhark.core.services.service_factory import create_standard_components
-        reddit, sentiment_analyzer, stock_validator = create_standard_components(enable_finbert=False)
+        reddit, sentiment_analyzer, stock_validator = create_standard_components()
         print("   ✅ All components ready")
         
     except Exception as e:

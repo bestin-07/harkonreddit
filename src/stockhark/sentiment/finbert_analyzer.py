@@ -28,14 +28,24 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
         """Initialize the actual FinBERT implementation"""
         try:
             # Try to import FinBERT dependencies
-            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
             import torch
             
             # Initialize FinBERT model and tokenizer
             model_name = "ProsusAI/finbert"
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            self.finbert_impl = "FinBERT model loaded successfully"
+            
+            # Create sentiment analysis pipeline
+            self.sentiment_pipeline = pipeline(
+                "sentiment-analysis",
+                model=self.model,
+                tokenizer=self.tokenizer,
+                device=0 if torch.cuda.is_available() else -1  # Use GPU if available
+            )
+            
+            self.finbert_impl = True
+            print(f"✅ FinBERT model loaded successfully ({'GPU' if torch.cuda.is_available() else 'CPU'})")
             
         except (ImportError, RuntimeError, Exception) as e:
             # FinBERT not available, this analyzer will fallback gracefully
@@ -44,7 +54,7 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
     
     def is_available(self) -> bool:
         """Check if FinBERT is available for analysis"""
-        return self.finbert_impl is not None
+        return self.finbert_impl is not None and hasattr(self, 'sentiment_pipeline')
     
     def analyze_sentiment(self, text: str, timestamp: Optional[str] = None,
                          apply_time_decay: bool = True) -> float:
@@ -63,8 +73,29 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
             raise RuntimeError("FinBERT analyzer not available")
         
         try:
-            # Use existing FinBERT implementation
-            sentiment_score, _ = self.finbert_impl.analyze_text_sentiment(text)
+            # Clean and prepare text
+            text = text.strip()
+            if not text:
+                return 0.0
+            
+            # Truncate text if too long (FinBERT has token limits)
+            max_length = 512
+            if len(text) > max_length:
+                text = text[:max_length]
+            
+            # Use FinBERT pipeline for sentiment analysis
+            result = self.sentiment_pipeline(text)[0]
+            
+            # Convert FinBERT labels to numerical scores
+            label = result['label'].lower()
+            confidence = result['score']
+            
+            if label == 'positive':
+                sentiment_score = confidence  # Bullish: 0 to 1
+            elif label == 'negative':
+                sentiment_score = -confidence  # Bearish: -1 to 0
+            else:  # neutral
+                sentiment_score = 0.0
             
             # Apply time decay if requested
             if apply_time_decay and timestamp:
@@ -111,24 +142,21 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
             # Analyze sentiment using FinBERT
             sentiment_score = self.analyze_sentiment(text, timestamp)
             
-            # Get additional analysis if available
-            additional_analysis = {}
-            if hasattr(self.finbert_impl, 'analyze_text_comprehensive'):
-                additional_analysis = self.finbert_impl.analyze_text_comprehensive(text)
+            # Get FinBERT raw results for confidence
+            finbert_result = self.sentiment_pipeline(text[:512])[0]
+            finbert_confidence = finbert_result['score']
             
             # Build comprehensive results
             analysis_results = {
                 'sentiment_score': sentiment_score,
                 'sentiment_label': self.determine_sentiment_label(sentiment_score),
-                'confidence': self.calculate_confidence(sentiment_score, len(text), len(stocks)),
+                'confidence': finbert_confidence,  # Use FinBERT's confidence directly
                 'method': 'finbert',
                 'text_length': len(text),
-                'stock_count': len(stocks)
+                'stock_count': len(stocks),
+                'finbert_label': finbert_result['label'],
+                'finbert_confidence': finbert_confidence
             }
-            
-            # Add FinBERT-specific analysis if available
-            if additional_analysis:
-                analysis_results.update(additional_analysis)
             
             return {
                 'stocks': stocks,
@@ -141,7 +169,7 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
     
     def analyze_posts_batch(self, posts: List[Dict]) -> Dict[str, Dict]:
         """
-        Batch analysis using FinBERT (if supported)
+        Batch analysis using FinBERT
         
         Args:
             posts: List of post dictionaries
@@ -152,13 +180,5 @@ class FinBERTAnalyzer(BaseSentimentAnalyzer):
         if not self.is_available():
             raise RuntimeError("FinBERT analyzer not available")
         
-        # Check if FinBERT implementation supports batch processing
-        if hasattr(self.finbert_impl, 'analyze_posts_batch'):
-            try:
-                return self.finbert_impl.analyze_posts_batch(posts)
-            except Exception:
-                # Fall back to individual processing
-                pass
-        
-        # Use base class batch processing as fallback
+        # Use base class batch processing (processes posts individually with FinBERT)
         return super().analyze_posts_batch(posts)

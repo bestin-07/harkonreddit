@@ -107,7 +107,7 @@ class BackgroundDataCollector:
             
             # Initialize components using ServiceFactory
             from .service_factory import create_standard_components
-            reddit, sentiment_analyzer, stock_validator = create_standard_components(enable_finbert=False)
+            reddit, sentiment_analyzer, stock_validator = create_standard_components()
             
             # Focus on most active subreddits
             subreddits = ['wallstreetbets', 'stocks', 'investing', 'pennystocks', 'options']

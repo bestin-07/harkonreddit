@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
+# Import feature flags from constants
+from ..constants import FEATURE_FLAGS
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -21,7 +24,7 @@ class ServiceConfig:
     database_timeout: float = 30.0
     
     # Sentiment analysis configuration
-    enable_finbert: bool = False
+    enable_finbert: bool = FEATURE_FLAGS.get('ENABLE_FINBERT', False)
     sentiment_cache_size: int = 1000
     
     # Stock validation configuration
@@ -119,10 +122,10 @@ class ServiceFactory:
             
             # Resolve relative paths
             if not os.path.isabs(folder_path):
-                # Path from service_factory.py: src/stockhark/core/service_factory.py
-                # parent.parent gives us src/stockhark/, parent.parent.parent gives us src/
-                # We want src/data/json
-                src_dir = Path(__file__).parent.parent.parent
+                # Path from service_factory.py: src/stockhark/core/services/service_factory.py
+                # parent.parent.parent gives us src/stockhark/, parent.parent.parent.parent gives us src/
+                # We want src/data/json, so need to go up 4 levels from current file
+                src_dir = Path(__file__).parent.parent.parent.parent
                 resolved_path = src_dir / folder_path
                 folder_path = str(resolved_path)
             
@@ -169,12 +172,12 @@ class ServiceFactory:
         
         return self._services['reddit_monitor']
     
-    def create_standard_components(self, enable_finbert: bool = False):
+    def create_standard_components(self, enable_finbert: Optional[bool] = None):
         """
         Create standard component set used across the application
         
         Args:
-            enable_finbert: Whether to enable FinBERT sentiment analysis
+            enable_finbert: Whether to enable FinBERT sentiment analysis (defaults to configuration)
             
         Returns:
             tuple: (reddit_client, sentiment_analyzer, stock_validator)
@@ -184,9 +187,12 @@ class ServiceFactory:
         # Initialize database first
         self.initialize_database()
         
+        # Use configuration default if not explicitly provided
+        finbert_enabled = enable_finbert if enable_finbert is not None else self.config.enable_finbert
+        
         # Create components
         reddit_client = self.get_reddit_client()
-        sentiment_analyzer = self.get_sentiment_analyzer(enable_finbert=enable_finbert)
+        sentiment_analyzer = self.get_sentiment_analyzer(enable_finbert=finbert_enabled)
         stock_validator = self.get_stock_validator()
         
         self.logger.info("Standard components created successfully")
@@ -259,18 +265,20 @@ def get_service_factory(config: Optional[ServiceConfig] = None) -> ServiceFactor
     
     return _service_factory
 
-def create_standard_components(enable_finbert: bool = False):
+def create_standard_components(enable_finbert: Optional[bool] = None):
     """
     Convenience function to create standard component set
     
     Args:
-        enable_finbert: Whether to enable FinBERT sentiment analysis
+        enable_finbert: Whether to enable FinBERT sentiment analysis (defaults to configuration)
         
     Returns:
         tuple: (reddit_client, sentiment_analyzer, stock_validator)
     """
     factory = get_service_factory()
-    return factory.create_standard_components(enable_finbert=enable_finbert)
+    # Use configuration default if not explicitly provided
+    finbert_enabled = enable_finbert if enable_finbert is not None else FEATURE_FLAGS.get('ENABLE_FINBERT', False)
+    return factory.create_standard_components(enable_finbert=finbert_enabled)
 
 def shutdown_all_services():
     """Shutdown all services in the global factory"""

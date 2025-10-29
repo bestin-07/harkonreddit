@@ -296,7 +296,7 @@ ERROR_CODE_SERVICE_INIT = f"{ERROR_PREFIX_SERVICE}_001"
 
 # Feature toggles for development and testing
 FEATURE_FLAGS: Dict[str, bool] = {
-    'ENABLE_FINBERT': False,           # Use FinBERT for sentiment analysis
+    'ENABLE_FINBERT': True,            # Use FinBERT for sentiment analysis
     'ENABLE_BACKGROUND_COLLECTION': True,  # Background data collection
     'ENABLE_EMAIL_ALERTS': False,     # Email notification system
     'ENABLE_ENHANCED_LOGGING': True,  # Detailed logging
