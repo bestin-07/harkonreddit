@@ -5,7 +5,6 @@ Centralized constants to eliminate magic numbers and hardcoded values
 throughout the codebase for better maintainability and configuration.
 """
 
-from datetime import timedelta
 from typing import Dict, List, Set
 
 # ==============================================================================
@@ -15,17 +14,15 @@ from typing import Dict, List, Set
 APP_NAME = "StockHark"
 APP_VERSION = "1.0.0"
 APP_DESCRIPTION = "Reddit Stock Sentiment Analyzer with Background Data Collection"
-DEFAULT_USER_AGENT = f"{APP_NAME}/{APP_VERSION}"
+# Removed DEFAULT_USER_AGENT - unused
 
 # ==============================================================================
 # DATABASE CONFIGURATION
 # ==============================================================================
 
-# Database file settings
-DATABASE_FILENAME = "stocks.db"
+# Database file settings - only keep used constants
 DATABASE_TIMEOUT_SECONDS = 30.0
-DATABASE_MAX_CONNECTIONS = 10
-DATABASE_JOURNAL_MODE = "WAL"  # Write-Ahead Logging for better performance
+# Removed unused: DATABASE_FILENAME, DATABASE_MAX_CONNECTIONS, DATABASE_JOURNAL_MODE
 
 # Query limits and pagination
 DEFAULT_STOCK_LIMIT = 10
@@ -34,28 +31,23 @@ DEFAULT_HOURS_WINDOW = 24
 EXTENDED_HOURS_WINDOW = 720  # 30 days
 MAX_HOURS_WINDOW = 8760  # 1 year
 
-# Database batch sizes
-BATCH_INSERT_SIZE = 100
-MAX_VARIABLE_NUMBER = 999  # SQLite limit for variables in single query
+# Database batch sizes - removed unused constants
+# Removed unused: BATCH_INSERT_SIZE, MAX_VARIABLE_NUMBER
 
 # ==============================================================================
 # REDDIT API CONFIGURATION
 # ==============================================================================
 
-# API rate limiting
+# API rate limiting - keep used constants
 REDDIT_API_DELAY_SECONDS = 0.2
-REDDIT_RATE_LIMIT_DELAY = 5
-REDDIT_MAX_RETRIES = 3
+# Removed unused: REDDIT_RATE_LIMIT_DELAY, REDDIT_MAX_RETRIES
 
-# Post fetching limits
-DEFAULT_POSTS_PER_SUBREDDIT = 20
+# Post fetching limits - keep used constants
+# Removed unused: DEFAULT_POSTS_PER_SUBREDDIT
 MAX_POSTS_PER_SUBREDDIT = 100
 MIN_POSTS_PER_SUBREDDIT = 5
 
-# Content filtering
-MAX_POST_TITLE_LENGTH = 300
-MAX_POST_CONTENT_LENGTH = 10000
-MAX_COMMENT_LENGTH = 1000
+# Content filtering (removed unused limits)
 
 # ==============================================================================
 # BACKGROUND DATA COLLECTION
@@ -66,15 +58,8 @@ DEFAULT_COLLECTION_INTERVAL_MINUTES = 30
 MIN_COLLECTION_INTERVAL_MINUTES = 5
 MAX_COLLECTION_INTERVAL_MINUTES = 1440  # 24 hours
 
-# Collection limits
-DEFAULT_COLLECTION_DURATION_MINUTES = 15
-MAX_COLLECTION_CYCLES = 1000
-BACKGROUND_SLEEP_SECONDS = 1200  # 20 minutes for periodic monitoring
-
-# Collection statistics
-COLLECTION_SUCCESS_THRESHOLD = 0.8  # 80% success rate
+# Collection statistics (simplified)
 MIN_STOCKS_PER_COLLECTION = 5
-TARGET_STOCKS_PER_COLLECTION = 50
 
 # ==============================================================================
 # SENTIMENT ANALYSIS
@@ -92,22 +77,13 @@ MIN_UNIQUE_POSTS = 2    # Minimum unique posts required for a stock to be consid
 
 # FinBERT configuration
 FINBERT_MODEL_NAME = "ProsusAI/finbert"
-FINBERT_MAX_LENGTH = 512
-FINBERT_BATCH_SIZE = 16
-
-# Sentiment thresholds
-SENTIMENT_BULLISH_THRESHOLD = 0.1
-SENTIMENT_BEARISH_THRESHOLD = -0.1
-SENTIMENT_CONFIDENCE_THRESHOLD = 0.7
 
 # Sentiment scoring
 MIN_SENTIMENT_SCORE = -1.0
 MAX_SENTIMENT_SCORE = 1.0
-NEUTRAL_SENTIMENT_SCORE = 0.0
 
 # Time decay for sentiment analysis
 SENTIMENT_TIME_DECAY_LAMBDA = 0.1
-SENTIMENT_TIME_WINDOW_HOURS = 24
 
 # Source reliability weights (as per methodology specification)
 SOURCE_WEIGHTS = {
@@ -170,46 +146,23 @@ TOTAL_EXPECTED_SYMBOLS = 4278
 # Flask configuration
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
-SECRET_KEY_LENGTH = 32
 
-# HTTP response codes
-HTTP_OK = 200
-HTTP_BAD_REQUEST = 400
-HTTP_NOT_FOUND = 404
-HTTP_INTERNAL_ERROR = 500
-
-# Web UI limits
-MAX_STOCKS_DISPLAY = 50
+# Web UI limits (simplified)
 DEFAULT_STOCKS_DISPLAY = 10
-STOCK_DETAILS_LIMIT = 100
 
 # ==============================================================================
-# FILE SYSTEM PATHS
+# FILE SYSTEM PATHS (simplified)
 # ==============================================================================
 
-# Directory names
-DATA_DIR_NAME = "data"
-JSON_DIR_NAME = "json"
-LOGS_DIR_NAME = "logs"
-SCRIPTS_DIR_NAME = "scripts"
-TEMPLATES_DIR_NAME = "templates"
-STATIC_DIR_NAME = "static"
-
-# File names
+# File names (keep used ones)
 NASDAQ_TICKERS_FILE = "nasdaq_tickers.json"
-AMEX_TICKERS_FILE = "amex_tickers.json"
-LOG_FILE_EXTENSION = ".log"
 
 # ==============================================================================
-# LOGGING CONFIGURATION
+# LOGGING CONFIGURATION (simplified)
 # ==============================================================================
 
-# Log levels
-DEFAULT_LOG_LEVEL = "INFO"
-DEBUG_LOG_LEVEL = "DEBUG"
-ERROR_LOG_LEVEL = "ERROR"
-
-# Log formatting
+# Log formatting (keep used constants)
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 LOG_MESSAGE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_FILE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
@@ -429,65 +382,10 @@ def get_subreddits_by_category(category: str) -> List[str]:
     }
     return categories.get(category, PRIMARY_US_SUBREDDITS)
 
-def validate_constant_ranges():
-    """Validate that all constants are within expected ranges"""
-    validations = []
-    
-    # Validate sentiment thresholds
-    if not (-1.0 <= SENTIMENT_BEARISH_THRESHOLD <= SENTIMENT_BULLISH_THRESHOLD <= 1.0):
-        validations.append("Invalid sentiment thresholds")
-    
-    # Validate time intervals
-    if not (MIN_COLLECTION_INTERVAL_MINUTES <= DEFAULT_COLLECTION_INTERVAL_MINUTES <= MAX_COLLECTION_INTERVAL_MINUTES):
-        validations.append("Invalid collection interval")
-    
-    # Validate stock limits
-    if not (1 <= DEFAULT_STOCK_LIMIT <= MAX_STOCK_LIMIT):
-        validations.append("Invalid stock limits")
-    
-    return validations
-
-# Validate constants on import
-_validation_errors = validate_constant_ranges()
-if _validation_errors:
-    import warnings
-    warnings.warn(f"Constant validation errors: {_validation_errors}")
+# Validation function removed - constants simplified
 
 # ==============================================================================
 # CONSTANTS SUMMARY
 # ==============================================================================
 
-def get_constants_summary() -> Dict[str, any]:
-    """Get a summary of all defined constants"""
-    return {
-        'app_info': {
-            'name': APP_NAME,
-            'version': APP_VERSION,
-            'description': APP_DESCRIPTION
-        },
-        'database': {
-            'timeout': DATABASE_TIMEOUT_SECONDS,
-            'default_limit': DEFAULT_STOCK_LIMIT,
-            'hours_window': DEFAULT_HOURS_WINDOW
-        },
-        'reddit': {
-            'posts_per_subreddit': DEFAULT_POSTS_PER_SUBREDDIT,
-            'api_delay': REDDIT_API_DELAY_SECONDS,
-            'monitored_subreddits': len(ALL_MONITORED_SUBREDDITS)
-        },
-        'background_collection': {
-            'interval_minutes': DEFAULT_COLLECTION_INTERVAL_MINUTES,
-            'duration_minutes': DEFAULT_COLLECTION_DURATION_MINUTES
-        },
-        'sentiment': {
-            'bullish_threshold': SENTIMENT_BULLISH_THRESHOLD,
-            'bearish_threshold': SENTIMENT_BEARISH_THRESHOLD,
-            'keywords_count': len(BULLISH_KEYWORDS) + len(BEARISH_KEYWORDS)
-        },
-        'validation': {
-            'symbol_length_range': (MIN_STOCK_SYMBOL_LENGTH, MAX_STOCK_SYMBOL_LENGTH),
-            'expected_symbols': TOTAL_EXPECTED_SYMBOLS,
-            'false_positives': len(FALSE_POSITIVE_SYMBOLS)
-        },
-        'feature_flags': FEATURE_FLAGS
-    }
+# Removed unused function: get_constants_summary()

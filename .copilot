@@ -115,6 +115,20 @@ MAIL_DEFAULT_SENDER=your-email@gmail.com
 
 ## Development Guidelines
 
+### Virtual Environment Usage
+**CRITICAL**: Always activate the virtual environment for ALL terminal operations to ensure consistent dependencies and prevent "module not found" errors.
+
+For PowerShell commands, always prefix with venv activation:
+```powershell
+& "C:/Users/antub/OneDrive - ABB/Documents/Bestin Codes/Reddit Hark/.venv/Scripts/Activate.ps1"; [your-command-here]
+```
+
+This ensures:
+- Consistent environment across all terminal operations
+- Prevents module import errors from different terminal sessions  
+- Maintains proper dependency isolation
+- Avoids conflicts with system Python packages
+
 ### Code Style
 - Follow PEP 8 for Python code
 - Use descriptive variable names
@@ -179,11 +193,12 @@ MAIL_DEFAULT_SENDER=your-email@gmail.com
 
 ## Support
 For development questions or issues:
-1. Check error logs in the application
-2. Verify API credentials and rate limits
-3. Test individual components separately
-4. Use debugging mode for development
-5. Use .vev to run python files
+1. **ALWAYS activate virtual environment first** using the PowerShell command above
+2. Check error logs in the application
+3. Verify API credentials and rate limits
+4. Test individual components separately
+5. Use debugging mode for development
+6. Ensure all Python commands use the activated venv
 
 ---
 

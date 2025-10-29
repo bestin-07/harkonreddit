@@ -220,15 +220,6 @@ class ServiceFactory:
         
         return self._services['background_collector']
     
-    def get_reddit_monitor(self):
-        """Get Reddit monitor"""
-        if 'reddit_monitor' not in self._services:
-            from ...monitoring.reddit_monitor import RedditMonitor
-            self._services['reddit_monitor'] = RedditMonitor()
-            self.logger.debug("Reddit monitor initialized")
-        
-        return self._services['reddit_monitor']
-    
     def create_standard_components(self, enable_finbert: Optional[bool] = None):
         """
         Create standard component set used across the application

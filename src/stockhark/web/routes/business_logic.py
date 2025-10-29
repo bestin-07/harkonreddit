@@ -16,25 +16,72 @@ from ...core.services.service_factory import get_service_factory
 # Get service factory instance
 factory = get_service_factory()
 
+def _get_posts_from_subreddits(reddit_client, subreddit_names, limit=20):
+    """Get posts from multiple subreddits using core Reddit client"""
+    posts = []
+    
+    for subreddit_name in subreddit_names:
+        try:
+            subreddit = reddit_client.subreddit(subreddit_name)
+            
+            for post in subreddit.hot(limit=limit):
+                if post.stickied:
+                    continue
+                
+                # Get post content
+                content = post.selftext if hasattr(post, 'selftext') else ''
+                
+                # Get top comments
+                post.comments.replace_more(limit=5)
+                top_comments = []
+                for comment in post.comments[:10]:
+                    if hasattr(comment, 'body'):
+                        top_comments.append(comment.body)
+                
+                posts.append({
+                    'id': post.id,
+                    'title': post.title,
+                    'content': content,
+                    'comments': top_comments,
+                    'score': post.score,
+                    'upvote_ratio': post.upvote_ratio,
+                    'num_comments': post.num_comments,
+                    'created_utc': datetime.fromtimestamp(post.created_utc),
+                    'url': f"https://reddit.com{post.permalink}",
+                    'subreddit': subreddit_name,
+                    'author': str(post.author) if post.author else '[deleted]'
+                })
+                
+        except Exception as e:
+            print(f"Error fetching posts from r/{subreddit_name}: {e}")
+            continue
+    
+    return posts
+
 def monitor_stocks():
     """Enhanced background task to monitor Reddit for stock mentions using global coverage"""
     try:
         print("🌍 Starting enhanced stock monitoring...")
         
         # Get services from factory
-        reddit_monitor = factory.get_reddit_monitor()
+        reddit_client = factory.get_reddit_client()
         sentiment_analyzer = factory.get_sentiment_analyzer(enable_finbert=False)
         stock_validator = factory.get_stock_validator()
         
-        # Use enhanced monitoring with multiple categories
-        categories = ['primary_us', 'european', 'trading', 'tech_focused']
+        # Define subreddit categories directly (no need for monitoring wrapper)
+        subreddit_categories = {
+            'primary_us': ['wallstreetbets', 'stocks', 'investing'],
+            'european': ['EuropeFIRE', 'UKInvesting', 'eupersonalfinance'],
+            'trading': ['options', 'thetagang', 'daytrading', 'pennystocks'],
+            'tech_focused': ['technology', 'artificial', 'startups']
+        }
         
-        for category in categories:
+        for category, subreddits in subreddit_categories.items():
             try:
                 print(f"📊 Monitoring {category}...")
                 
-                # Get posts from this category using enhanced monitoring
-                posts = reddit_monitor.get_enhanced_hot_posts(categories=[category], limit=20)
+                # Get posts directly from Reddit client
+                posts = _get_posts_from_subreddits(reddit_client, subreddits, limit=20)
                 
                 posts_processed = 0
                 stocks_found = 0

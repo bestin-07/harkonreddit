@@ -103,7 +103,7 @@ class AIStockValidator:
             # Common words that appear in caps
             'STOCK', 'STOCKS', 'MARKET', 'TRADE', 'TRADING', 'INVEST', 'INVESTING', 'MONEY',
             'PRICE', 'VALUE', 'PROFIT', 'LOSS', 'GAIN', 'BULL', 'BEAR', 'CASH', 'DEBT',
-            'BIG', 'HUGE', 'MASSIVE', 'FIRE', 'HOT', 'COLD', 'COOL', 'BEST', 'WORST',
+            'BIG', 'HUGE', 'MASSIVE', 'FIRE', 'HOT', 'COLD', 'COOL', 'BEST', 'WORST', 'GROW',
             
             # Prepositions and conjunctions
             'ON', 'IN', 'AT', 'TO', 'OF', 'BY', 'OR', 'AS', 'IF', 'SO', 'UP', 'GO', 'NO',

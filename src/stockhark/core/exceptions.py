@@ -133,20 +133,7 @@ class SentimentAnalysisError(StockHarkException):
         super().__init__(message, 'SENTIMENT_ERROR', context)
 
 
-class StockValidationError(StockHarkException):
-    """Raised when stock symbol validation fails"""
-    
-    def __init__(self, message: str, symbol: Optional[str] = None, 
-                 validator_type: Optional[str] = None, symbols_loaded: Optional[int] = None):
-        context = {}
-        if symbol:
-            context['symbol'] = symbol
-        if validator_type:
-            context['validator_type'] = validator_type
-        if symbols_loaded:
-            context['symbols_loaded'] = symbols_loaded
-        
-        super().__init__(message, 'STOCK_VALIDATION_ERROR', context)
+# Removed unused: StockValidationError
 
 
 class BackgroundServiceError(StockHarkException):
@@ -165,34 +152,7 @@ class BackgroundServiceError(StockHarkException):
         super().__init__(message, 'BACKGROUND_SERVICE_ERROR', context)
 
 
-class ServiceFactoryError(StockHarkException):
-    """Raised when service factory operations fail"""
-    
-    def __init__(self, message: str, service_type: Optional[str] = None, 
-                 factory_operation: Optional[str] = None):
-        context = {}
-        if service_type:
-            context['service_type'] = service_type
-        if factory_operation:
-            context['factory_operation'] = factory_operation
-        
-        super().__init__(message, 'SERVICE_FACTORY_ERROR', context)
-
-
-class DataCollectionError(StockHarkException):
-    """Raised when data collection processes fail"""
-    
-    def __init__(self, message: str, collection_type: Optional[str] = None, 
-                 subreddit: Optional[str] = None, posts_processed: Optional[int] = None):
-        context = {}
-        if collection_type:
-            context['collection_type'] = collection_type
-        if subreddit:
-            context['subreddit'] = subreddit
-        if posts_processed:
-            context['posts_processed'] = posts_processed
-        
-        super().__init__(message, 'DATA_COLLECTION_ERROR', context)
+# Removed unused: ServiceFactoryError, DataCollectionError
 
 
 # Error severity levels
@@ -204,56 +164,4 @@ class ErrorSeverity:
     INFO = "INFO"           # Informational message
 
 
-# Predefined error messages for common scenarios
-class ErrorMessages:
-    """Centralized error messages for consistency"""
-    
-    # Configuration errors
-    REDDIT_API_NOT_CONFIGURED = "Reddit API credentials not configured. Please set REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, and REDDIT_USER_AGENT in your .env file."
-    INVALID_REDDIT_CREDENTIALS = "Invalid Reddit API credentials. Please check your client ID and secret."
-    
-    # Database errors
-    DATABASE_CONNECTION_FAILED = "Failed to connect to database. Check if database file is accessible."
-    DATABASE_QUERY_FAILED = "Database query failed. Check query syntax and table schema."
-    DATABASE_INTEGRITY_ERROR = "Database integrity constraint violated."
-    
-    # Reddit API errors
-    REDDIT_RATE_LIMITED = "Reddit API rate limit exceeded. Please wait before making more requests."
-    SUBREDDIT_NOT_FOUND = "Subreddit not found or inaccessible."
-    REDDIT_API_UNAVAILABLE = "Reddit API is currently unavailable."
-    
-    # Validation errors
-    INVALID_STOCK_SYMBOL = "Invalid stock symbol format. Expected 1-5 uppercase letters."
-    STOCK_SYMBOL_NOT_FOUND = "Stock symbol not found in validation database."
-    
-    # Sentiment analysis errors
-    FINBERT_MODEL_UNAVAILABLE = "FinBERT model is not available. Falling back to rule-based analysis."
-    SENTIMENT_ANALYSIS_FAILED = "Sentiment analysis failed for the provided text."
-    
-    # Service errors
-    SERVICE_INITIALIZATION_FAILED = "Failed to initialize service."
-    BACKGROUND_SERVICE_STOPPED = "Background service stopped unexpectedly."
-
-
-def create_error_from_exception(exc: Exception, error_type: type = StockHarkException, 
-                               context: Optional[Dict[str, Any]] = None) -> StockHarkException:
-    """
-    Convert a standard exception to a StockHark exception
-    
-    Args:
-        exc: Original exception
-        error_type: Type of StockHark exception to create
-        context: Additional context information
-        
-    Returns:
-        StockHarkException: Wrapped exception
-    """
-    message = str(exc)
-    if not message:
-        message = f"{type(exc).__name__} occurred"
-    
-    return error_type(
-        message=message,
-        context=context,
-        cause=exc
-    )
+# Removed unused: ErrorMessages class, create_error_from_exception function
