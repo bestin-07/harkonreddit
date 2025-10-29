@@ -80,6 +80,16 @@ TARGET_STOCKS_PER_COLLECTION = 50
 # SENTIMENT ANALYSIS
 # ==============================================================================
 
+# Post count weighting - gives more importance to stocks mentioned in multiple posts
+# Formula: post_weight = 1.0 + (log(unique_posts) * POST_COUNT_WEIGHT_MULTIPLIER)
+POST_COUNT_WEIGHT_MULTIPLIER = 0.3  # Boost factor for multiple posts
+MIN_POST_COUNT_WEIGHT = 1.0  # Minimum weight (single post)
+MAX_POST_COUNT_WEIGHT = 2.0  # Maximum weight cap
+
+# Minimum mention threshold - filters out stocks with insufficient discussion
+MIN_STOCK_MENTIONS = 5  # Minimum mentions required for a stock to be considered
+MIN_UNIQUE_POSTS = 2    # Minimum unique posts required for a stock to be considered
+
 # FinBERT configuration
 FINBERT_MODEL_NAME = "ProsusAI/finbert"
 FINBERT_MAX_LENGTH = 512
@@ -109,6 +119,30 @@ SOURCE_WEIGHTS = {
     'reddit/r/wallstreetbets': 0.8,  # Lower reliability due to meme nature
     'reddit/r/pennystocks': 0.7,  # Lower reliability due to speculation
     'default': 1.0  # Default weight for unknown sources
+}
+
+# Symbol weight penalties for common English words that are legitimate stock symbols
+# but likely to be false positives in casual text
+COMMON_WORD_SYMBOL_WEIGHTS = {
+    # Legitimate stock symbols that are also common English words - reduced weight
+    'ANY': 0.3, 'BEAT': 0.4, 'CARE': 0.4, 'CASH': 0.6, 'COST': 0.7, 'GAME': 0.5,
+    'GOOD': 0.2, 'GROW': 0.6, 'HOPE': 0.3, 'LAND': 0.5, 'LINE': 0.4, 'LINK': 0.4,
+    'LIVE': 0.3, 'LOVE': 0.2, 'MIND': 0.4, 'MOVE': 0.3, 'NEXT': 0.4, 'ON': 0.2,
+    'OPEN': 0.3, 'PLAY': 0.3, 'PLUS': 0.5, 'REAL': 0.3, 'ROAD': 0.6, 'ROCK': 0.6,
+    'SELF': 0.4, 'STEP': 0.4, 'TALK': 0.3, 'TEAM': 0.4, 'TECH': 0.5, 'TRIP': 0.5,
+    'UNIT': 0.5, 'WAVE': 0.6, 'ZONE': 0.5,
+    
+    # Pure false positives - very common words that are NOT legitimate stock symbols
+    # These get heavy penalties to minimize their impact
+    'FREE': 0.05, 'HELP': 0.05, 'HOME': 0.1, 'LIFE': 0.05, 'LOOK': 0.05, 'MAKE': 0.05,
+    'MORE': 0.05, 'NEED': 0.05, 'PLAN': 0.1, 'POST': 0.1, 'RACE': 0.1, 'RIDE': 0.1,
+    'RISE': 0.1, 'SAFE': 0.1, 'SAME': 0.05, 'SAVE': 0.1, 'SHOW': 0.1, 'SIDE': 0.1,
+    'SIZE': 0.1, 'STOP': 0.1, 'SURE': 0.05, 'TAKE': 0.05, 'TIME': 0.05, 'TURN': 0.1,
+    'VIEW': 0.1, 'WALK': 0.1, 'WANT': 0.05, 'WEAR': 0.1, 'WEEK': 0.1, 'WELL': 0.05,
+    'WILL': 0.05, 'WORK': 0.1, 'YEAR': 0.1, 'YOUR': 0.05,
+    
+    # Default weight for other symbols
+    'default': 1.0
 }
 
 # ==============================================================================
@@ -264,10 +298,28 @@ BEARISH_KEYWORDS: Set[str] = {
 
 # False positive filter for stock symbol validation
 FALSE_POSITIVE_SYMBOLS: Set[str] = {
-    # Common English words
+    # Common English words (2-4 letters that appear as false stock symbols)
     'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
     'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW',
     'ITS', 'MAY', 'NEW', 'NOW', 'OLD', 'SEE', 'TWO', 'WHO', 'BOY', 'DID',
+    'ANY', 'TECH', 'REAL', 'NEXT', 'OPEN', 'MOVE', 'GOOD', 'COST', 'CASH', 
+    'LINE', 'STEP', 'HOPE', 'BEAT', 'PLAY', 'TALK', 'TEAM', 'FORM', 'CARE',
+    'LOVE', 'LIVE', 'TRUE', 'NICE', 'ELSE', 'EVEN', 'EVER', 'FIVE', 'FOUR',
+    'FREE', 'FULL', 'GAME', 'GIVE', 'GONE', 'GROW', 'HAND', 'HEAD', 'HELP',
+    'HERE', 'HIGH', 'HOME', 'HOUR', 'HUGE', 'IDEA', 'INTO', 'ITEM', 'JUST',
+    'KEEP', 'KIND', 'KNOW', 'LAND', 'LAST', 'LATE', 'LEFT', 'LESS', 'LIFE',
+    'LIKE', 'LINK', 'LIST', 'LOOK', 'LOST', 'LOTS', 'MADE', 'MAKE', 'MANY',
+    'MASS', 'MATH', 'MEAN', 'MIND', 'MODE', 'MORE', 'MOST', 'MUCH', 'MUST',
+    'NAME', 'NEED', 'NEWS', 'NICE', 'ODDS', 'ONLY', 'OPEN', 'OVER', 'PAID',
+    'PART', 'PAST', 'PATH', 'PICK', 'PLAN', 'PLUS', 'POOL', 'PORT', 'POST',
+    'PROF', 'PUSH', 'RACE', 'RARE', 'RATE', 'READ', 'REST', 'RIDE', 'RISE',
+    'RISK', 'ROAD', 'ROCK', 'ROLE', 'ROOM', 'RULE', 'SAFE', 'SAME', 'SAVE',
+    'SEEM', 'SELF', 'SEND', 'SHOW', 'SIDE', 'SIZE', 'SLOW', 'SOME', 'SOON',
+    'SORT', 'STOP', 'SUCH', 'SURE', 'TAKE', 'TELL', 'TEST', 'TEXT', 'THAN',
+    'THAT', 'THEM', 'THEY', 'THIS', 'TIME', 'TOLD', 'TOOK', 'TOWN', 'TRIP',
+    'TURN', 'TYPE', 'UNIT', 'USED', 'USER', 'VERY', 'VIEW', 'WAIT', 'WALK',
+    'WANT', 'WAVE', 'WAYS', 'WEEK', 'WELL', 'WENT', 'WERE', 'WHAT', 'WHEN',
+    'WILL', 'WITH', 'WORD', 'WORK', 'YEAR', 'YOUR', 'ZONE',
     
     # Social media abbreviations
     'LOL', 'OMG', 'WTF', 'TBH', 'IMO', 'YOLO', 'WSB', 'TLDR', 'ELI',
@@ -276,6 +328,8 @@ FALSE_POSITIVE_SYMBOLS: Set[str] = {
     # Financial terms (not stock symbols)
     'BUY', 'SELL', 'HOLD', 'LONG', 'SHORT', 'CALL', 'PUT', 'MOON',
     'BEAR', 'BULL', 'YOLO', 'FOMO', 'ATH', 'ATL', 'RSI', 'MACD',
+    'FUND', 'APPS', 'CAPS', 'TOPS', 'GAIN', 'LOSS', 'HUGE', 'BOOM',
+    'FAST', 'SLOW', 'HIGH', 'DOWN', 'PUMP', 'DUMP', 'IRON', 'GOLD',
     
     # Time references
     'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN',

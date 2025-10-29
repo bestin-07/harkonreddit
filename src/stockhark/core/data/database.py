@@ -12,8 +12,12 @@ from contextlib import contextmanager
 from typing import List, Dict, Optional, Any, Tuple
 try:
     from ...config import DATABASE_PATH
+    from ..constants import MIN_STOCK_MENTIONS, MIN_UNIQUE_POSTS
 except ImportError:
     from config import DATABASE_PATH
+    # Fallback defaults if constants not available
+    MIN_STOCK_MENTIONS = 5
+    MIN_UNIQUE_POSTS = 2
 
 # Database configuration
 DATABASE_FILE = str(DATABASE_PATH)
@@ -179,18 +183,25 @@ def add_stock_data(symbol: str, sentiment: float, sentiment_label: str,
 # Stock Query Functions
 
 def get_top_stocks(limit: int = 10, hours: int = 24, 
-                  min_mentions: int = 1) -> List[Dict[str, Any]]:
+                  min_mentions: int = None, min_unique_posts: int = None) -> List[Dict[str, Any]]:
     """
     Get top stocks ranked by mentions and sentiment strength
     
     Args:
         limit: Maximum number of stocks to return
         hours: Time period in hours to analyze
-        min_mentions: Minimum mentions required for inclusion
+        min_mentions: Minimum mentions required for inclusion (default: MIN_STOCK_MENTIONS)
+        min_unique_posts: Minimum unique posts required (default: MIN_UNIQUE_POSTS)
         
     Returns:
         List of stock dictionaries with comprehensive metrics
     """
+    # Use constants as defaults if not specified
+    if min_mentions is None:
+        min_mentions = MIN_STOCK_MENTIONS
+    if min_unique_posts is None:
+        min_unique_posts = MIN_UNIQUE_POSTS
+        
     cutoff_time = datetime.now() - timedelta(hours=hours)
     
     with get_db_connection() as conn:
@@ -203,7 +214,7 @@ def get_top_stocks(limit: int = 10, hours: int = 24,
                 MAX(sentiment) as max_sentiment,
                 MIN(sentiment) as min_sentiment,
                 (MAX(sentiment) - MIN(sentiment)) as sentiment_range,
-                COUNT(DISTINCT post_url) as unique_posts,
+                COUNT(DISTINCT COALESCE(post_url, source)) as unique_posts,
                 COUNT(DISTINCT source) as source_count,
                 MAX(timestamp) as latest_mention,
                 MIN(timestamp) as first_mention,
@@ -216,13 +227,13 @@ def get_top_stocks(limit: int = 10, hours: int = 24,
             FROM stock_data 
             WHERE timestamp >= ? 
             GROUP BY symbol
-            HAVING COUNT(*) >= ?
+            HAVING COUNT(*) >= ? AND COUNT(DISTINCT COALESCE(post_url, source)) >= ?
             ORDER BY 
+                avg_sentiment DESC,
                 total_mentions DESC,
-                ABS(avg_sentiment) DESC,
                 avg_confidence DESC
             LIMIT ?
-        ''', (cutoff_time, min_mentions, limit)).fetchall()
+        ''', (cutoff_time, min_mentions, min_unique_posts, limit)).fetchall()
         
         return [_format_stock_result(row) for row in results]
 

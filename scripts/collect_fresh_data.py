@@ -28,6 +28,7 @@ except ImportError:
 from stockhark.sentiment_analyzer import EnhancedSentimentAnalyzer
 from stockhark.core.validator import StockValidator
 from stockhark.core.data import init_db, add_stock_data, get_top_stocks, get_database_stats
+from stockhark.core.services.sentiment_aggregator import get_sentiment_aggregator, SentimentMention
 
 def collect_fresh_data(duration_minutes=10, posts_per_subreddit=15):
     """
@@ -70,6 +71,10 @@ def collect_fresh_data(duration_minutes=10, posts_per_subreddit=15):
     total_stocks_found = 0
     new_mentions_added = 0
     
+    # Initialize enhanced sentiment aggregation system
+    aggregator = get_sentiment_aggregator()
+    all_mentions = []  # Collect all mentions for batch aggregation
+    
     # Focus on most active financial subreddits
     priority_subreddits = [
         'wallstreetbets', 'stocks', 'investing', 'pennystocks',
@@ -110,47 +115,35 @@ def collect_fresh_data(duration_minutes=10, posts_per_subreddit=15):
                         print(f"   🎯 Post {i}: Found {len(valid_symbols)} stocks → {', '.join(valid_symbols)}")
                         print(f"      📰 '{post.title[:50]}...' ({post.score} ⬆️)")
                         
+                        # Get raw sentiment score (Step 1: FinBERT Analysis) 
+                        underlying_analyzer = sentiment_analyzer._analyzer
+                        raw_sentiment = underlying_analyzer.analyze_sentiment(
+                            full_text, 
+                            timestamp=None,  # We'll pass timestamp separately
+                            apply_time_decay=False  # We handle time decay in aggregation
+                        )
+                        
+                        # Create mentions for each symbol in this post (for aggregation)
+                        post_timestamp = datetime.fromtimestamp(post.created_utc)
+                        post_source = f"reddit/r/{subreddit_name}"
+                        post_url = f"https://reddit.com{post.permalink}"
+                        
                         for symbol in valid_symbols:
-                            # Analyze sentiment for this stock
-                            sentiment_score = sentiment_analyzer.analyze_sentiment(full_text)
+                            mention = SentimentMention(
+                                symbol=symbol,
+                                raw_sentiment=raw_sentiment,
+                                timestamp=post_timestamp,
+                                source=post_source,
+                                text=full_text,
+                                post_url=post_url
+                            )
+                            all_mentions.append(mention)
+                            subreddit_stocks += 1
                             
-                            # Convert float score to dictionary format
-                            if sentiment_score > 0.1:
-                                sentiment_label = 'bullish'
-                            elif sentiment_score < -0.1:
-                                sentiment_label = 'bearish'
-                            else:
-                                sentiment_label = 'neutral'
-                            
-                            sentiment_result = {
-                                'score': sentiment_score,
-                                'label': sentiment_label,
-                                'confidence': 0.7
-                            }
-                            
-                            # Add to database
-                            try:
-                                add_stock_data(
-                                    symbol=symbol,
-                                    sentiment=sentiment_result['score'],
-                                    sentiment_label=sentiment_result['label'],
-                                    confidence=sentiment_result.get('confidence', 0.5),
-                                    mentions=1,
-                                    source=f"reddit/r/{subreddit_name}",
-                                    post_url=f"https://reddit.com{post.permalink}",
-                                    timestamp=datetime.fromtimestamp(post.created_utc)
-                                )
-                                
-                                new_mentions_added += 1
-                                subreddit_stocks += 1
-                                
-                                # Show important stock mentions
-                                if symbol in ['TSLA', 'AAPL', 'NVDA', 'META', 'GOOGL', 'MSFT', 'GME', 'AMC', 'PLTR', 'NIO']:
-                                    sentiment_emoji = "🟢" if sentiment_result['label'] == 'bullish' else "🔴" if sentiment_result['label'] == 'bearish' else "⚪"
-                                    print(f"      💎 ${symbol} {sentiment_emoji} {sentiment_result['label']} ({sentiment_result['score']:+.3f})")
-                                
-                            except Exception as e:
-                                print(f"      ❌ Error saving {symbol}: {e}")
+                            # Show important stock mentions (preview with raw sentiment)
+                            if symbol in ['TSLA', 'AAPL', 'NVDA', 'META', 'GOOGL', 'MSFT', 'GME', 'AMC', 'PLTR', 'NIO']:
+                                sentiment_emoji = "🟢" if raw_sentiment > 0.1 else "🔴" if raw_sentiment < -0.1 else "⚪"
+                                print(f"      💎 ${symbol} {sentiment_emoji} raw sentiment ({raw_sentiment:+.3f})")
                     
                     total_posts_processed += 1
                     
@@ -178,14 +171,60 @@ def collect_fresh_data(duration_minutes=10, posts_per_subreddit=15):
     except KeyboardInterrupt:
         print(f"\n⏹️  Collection stopped by user")
     
+    # Apply Steps 2-5: Time Decay, Source Weighting, Symbol Penalties, Post Count Boost, Normalization
+    if all_mentions:
+        print(f"\n🧠 Applying enhanced sentiment methodology to {len(all_mentions)} mentions...")
+        
+        # Group mentions by stock symbol for aggregation
+        from collections import defaultdict
+        stock_mentions = defaultdict(list)
+        for mention in all_mentions:
+            stock_mentions[mention.symbol].append(mention)
+        
+        print(f"   📊 Found {len(stock_mentions)} unique stocks for aggregation")
+        
+        # Create descriptive source string from subreddits processed
+        processed_subreddits = sorted(set(priority_subreddits))
+        source_description = f"reddit/r/{'+'.join(processed_subreddits)}"
+        
+        # Process each stock with full methodology
+        for symbol, mentions in stock_mentions.items():
+            try:
+                # Apply full 5-step methodology with all enhancements
+                aggregated_result = aggregator.aggregate_stock_sentiment(mentions)
+                
+                # Add aggregated result to database with descriptive source
+                add_stock_data(
+                    symbol=symbol,
+                    sentiment=aggregated_result.final_sentiment,
+                    sentiment_label=aggregated_result.sentiment_label,
+                    confidence=aggregated_result.confidence,
+                    mentions=aggregated_result.total_mentions,
+                    source=source_description,  # Shows which subreddits were analyzed
+                    post_url=None,  # Aggregated data doesn't have single URL
+                    timestamp=datetime.now()
+                )
+                
+                new_mentions_added += aggregated_result.total_mentions
+                
+                # Show enhanced results for important stocks
+                if symbol in ['TSLA', 'AAPL', 'NVDA', 'META', 'GOOGL', 'MSFT', 'GME', 'AMC', 'PLTR', 'NIO']:
+                    emoji = "🟢" if aggregated_result.sentiment_label == 'bullish' else "🔴" if aggregated_result.sentiment_label == 'bearish' else "⚪"
+                    print(f"   💎 ${symbol:6} {emoji} {aggregated_result.sentiment_label} ({aggregated_result.final_sentiment:+.3f}) | {len(mentions)} mentions across {len(set(m.post_url for m in mentions))} posts")
+                    
+            except Exception as e:
+                print(f"   ❌ Error aggregating {symbol}: {e}")
+        
+        print(f"   ✅ Enhanced methodology applied to all stocks")
+    
     # Final results
     actual_duration = (datetime.now() - start_time).total_seconds() / 60
     print(f"\n" + "=" * 50)
-    print(f"📊 Collection Results:")
+    print(f"📊 Collection Results with Enhanced Methodology:")
     print(f"   Duration: {actual_duration:.1f} minutes")
     print(f"   Posts processed: {total_posts_processed}")
     print(f"   Stock mentions found: {total_stocks_found}")
-    print(f"   New mentions added: {new_mentions_added}")
+    print(f"   Enhanced aggregations added: {new_mentions_added}")
     
     # Show updated database stats
     final_stats = get_database_stats()

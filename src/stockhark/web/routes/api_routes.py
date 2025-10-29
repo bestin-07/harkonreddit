@@ -15,6 +15,37 @@ from ...core.services.service_factory import get_service_factory
 # Create blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+def _format_source_for_display(source: str) -> str:
+    """
+    Format source names for user-friendly display
+    Converts technical sources to readable subreddit names
+    """
+    if not source:
+        return "Unknown"
+    
+    # Handle methodology and aggregated sources
+    if 'methodology' in source.lower() or 'aggregated' in source.lower():
+        return "Multiple Sources"
+    
+    # Extract subreddit name from reddit sources
+    if source.startswith('reddit/r/'):
+        subreddit_part = source.split('/', 2)[-1]  # Get everything after 'reddit/r/'
+        
+        # Handle multiple subreddits (joined with +)
+        if '+' in subreddit_part:
+            subreddits = subreddit_part.split('+')
+            if len(subreddits) <= 3:
+                return f"r/{' + r/'.join(subreddits)}"
+            else:
+                return f"r/{' + r/'.join(subreddits[:3])} + {len(subreddits)-3} more"
+        else:
+            return f"r/{subreddit_part}"
+    elif source.startswith('reddit'):
+        return "r/reddit"
+    
+    # Handle other sources
+    return source
+
 # Get service factory instance
 factory = get_service_factory()
 
@@ -162,7 +193,7 @@ def stock_details(symbol):
                         'timestamp': mention[0],
                         'sentiment': round(mention[1], 3),
                         'sentiment_label': mention[2],
-                        'source': mention[3],
+                        'source': _format_source_for_display(mention[3]),
                         'post_url': mention[4]
                     }
                     for mention in recent_mentions
@@ -177,7 +208,7 @@ def stock_details(symbol):
                 ],
                 'top_sources': [
                     {
-                        'source': source[0],
+                        'source': _format_source_for_display(source[0]),
                         'mentions': source[1],
                         'avg_sentiment': round(source[2], 3)
                     }

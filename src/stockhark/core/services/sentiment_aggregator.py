@@ -12,6 +12,10 @@ from collections import defaultdict
 from ..constants import (
     SENTIMENT_TIME_DECAY_LAMBDA,
     SOURCE_WEIGHTS,
+    COMMON_WORD_SYMBOL_WEIGHTS,
+    POST_COUNT_WEIGHT_MULTIPLIER,
+    MIN_POST_COUNT_WEIGHT,
+    MAX_POST_COUNT_WEIGHT,
     MIN_SENTIMENT_SCORE,
     MAX_SENTIMENT_SCORE
 )
@@ -121,6 +125,42 @@ class StockSentimentAggregator:
         # Default weight
         return self.source_weights['default']
     
+    def get_symbol_weight(self, symbol: str) -> float:
+        """
+        Get weight penalty for common English words that are also stock symbols
+        
+        Args:
+            symbol: Stock symbol to check
+            
+        Returns:
+            Weight multiplier (1.0 = normal, <1.0 = reduced weight for common words)
+        """
+        return COMMON_WORD_SYMBOL_WEIGHTS.get(symbol.upper(), 
+                                           COMMON_WORD_SYMBOL_WEIGHTS['default'])
+    
+    def get_post_count_weight(self, unique_posts: int) -> float:
+        """
+        Calculate weight boost based on number of unique posts mentioning the stock
+        More posts = more widespread discussion = higher importance
+        
+        Formula: weight = 1.0 + (log(unique_posts) * multiplier)
+        
+        Args:
+            unique_posts: Number of unique posts mentioning the stock
+            
+        Returns:
+            Weight multiplier (>=1.0, higher for more posts)
+        """
+        if unique_posts <= 1:
+            return MIN_POST_COUNT_WEIGHT
+        
+        # Logarithmic scaling to prevent excessive weighting
+        log_posts = math.log(unique_posts)
+        weight = MIN_POST_COUNT_WEIGHT + (log_posts * POST_COUNT_WEIGHT_MULTIPLIER)
+        
+        # Cap the maximum weight
+        return min(weight, MAX_POST_COUNT_WEIGHT)
+    
     def aggregate_stock_sentiment(self, mentions: List[SentimentMention], 
                                 include_debug: bool = False) -> AggregatedSentiment:
         """
@@ -148,6 +188,16 @@ class StockSentimentAggregator:
         symbol = mentions[0].symbol
         reference_time = datetime.now()
         
+        # Calculate unique posts count for post count weighting
+        unique_post_ids = set()
+        for mention in mentions:
+            if hasattr(mention, 'post_id') and mention.post_id:
+                unique_post_ids.add(mention.post_id)
+        unique_posts_count = len(unique_post_ids) if unique_post_ids else len(mentions)
+        
+        # Step 3.2: Post count weight - gives more importance to widely discussed stocks
+        post_count_weight = self.get_post_count_weight(unique_posts_count)
+        
         # Calculate weighted contributions
         weighted_numerator = 0.0
         weighted_denominator = 0.0
@@ -160,8 +210,11 @@ class StockSentimentAggregator:
             # Step 3: Source reliability weight  
             source_weight = self.get_source_weight(mention.source)
             
-            # Combined weight
-            total_weight = time_weight * source_weight
+            # Step 3.1: Symbol weight penalty for common words
+            symbol_weight = self.get_symbol_weight(symbol)
+            
+            # Combined weight including post count boost
+            total_weight = time_weight * source_weight * symbol_weight * post_count_weight
             
             # Weighted contribution
             weighted_contribution = mention.raw_sentiment * total_weight
@@ -178,6 +231,9 @@ class StockSentimentAggregator:
                     'time_weight': round(time_weight, 4),
                     'source': mention.source,
                     'source_weight': round(source_weight, 4),
+                    'symbol_weight': round(symbol_weight, 4),
+                    'post_count_weight': round(post_count_weight, 4),
+                    'unique_posts': unique_posts_count,
                     'total_weight': round(total_weight, 4),
                     'weighted_contribution': round(weighted_contribution, 4)
                 })

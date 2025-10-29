@@ -180,6 +180,10 @@ class BackgroundDataCollector:
                 self.logger.info(f"Collected {len(all_mentions)} mentions, aggregating by stock using full methodology...")
                 aggregated_results = aggregator.aggregate_multiple_stocks(all_mentions)
                 
+                # Create descriptive source string from subreddits processed
+                processed_subreddits = sorted(set(subreddits))
+                source_description = f"reddit/r/{'+'.join(processed_subreddits)}"
+                
                 # Store aggregated results in database
                 stocks_found = 0
                 for symbol, result in aggregated_results.items():
@@ -190,7 +194,7 @@ class BackgroundDataCollector:
                             sentiment_label=result.sentiment_label.lower().replace(' ', '_'),
                             confidence=result.confidence,
                             mentions=result.total_mentions,
-                            source="methodology_v1.0_aggregated",
+                            source=source_description,
                             post_url=None,
                             timestamp=datetime.now()
                         )
