@@ -41,7 +41,7 @@ venv.bak/
 *.sqlite3
 
 # Allow the main stocks database to be committed
-!src/data/stocks.db
+src/data/stocks.db
 
 # Logs
 *.log
