@@ -57,12 +57,6 @@
                     <div class="stock-header">
                         <div class="stock-symbol">
                             <h3>${{ stock.symbol }}</h3>
-                            <div class="stock-badges">
-                                <span class="mentions-badge">
-                                    <i class="fas fa-comment"></i>
-                                    {{ stock.mentions }}
-                                </span>
-                            </div>
                         </div>
                         <div class="sentiment-indicator sentiment-{{ stock.overall_sentiment }}">
                             <i class="fas fa-{{ 'arrow-up' if stock.overall_sentiment == 'bullish' else 'arrow-down' if stock.overall_sentiment == 'bearish' else 'minus' }}"></i>
@@ -206,9 +200,25 @@ function viewStockDetails(symbol) {
                         <h3><i class="fas fa-chart-pie"></i> Sentiment Breakdown</h3>
                         <div class="sentiment-breakdown">
                             <div class="sentiment-bar">
-                                <div class="bullish" style="width: ${(info.bullish/info.mentions*100).toFixed(1)}%">${info.bullish}</div>
-                                <div class="neutral" style="width: ${(info.neutral/info.mentions*100).toFixed(1)}%">${info.neutral}</div>
-                                <div class="bearish" style="width: ${(info.bearish/info.mentions*100).toFixed(1)}%">${info.bearish}</div>
+                                ${(() => {
+                                    const mentions = Number(info.mentions) || 0;
+                                    const bullish = Number(info.bullish) || 0;
+                                    const neutral = Number(info.neutral) || 0;
+                                    const bearish = Number(info.bearish) || 0;
+                                    if (mentions > 0) {
+                                        return `
+                                            <div class='bullish' style='width: ${(bullish/mentions*100).toFixed(1)}%'>${bullish}</div>
+                                            <div class='neutral' style='width: ${(neutral/mentions*100).toFixed(1)}%'>${neutral}</div>
+                                            <div class='bearish' style='width: ${(bearish/mentions*100).toFixed(1)}%'>${bearish}</div>
+                                        `;
+                                    } else {
+                                        return `
+                                            <div class='bullish' style='width:0%'>0</div>
+                                            <div class='neutral' style='width:0%'>0</div>
+                                            <div class='bearish' style='width:0%'>0</div>
+                                        `;
+                                    }
+                                })()}
                             </div>
                         </div>
                     </div>

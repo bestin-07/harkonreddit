@@ -317,7 +317,7 @@ ERROR_CODE_SERVICE_INIT = f"{ERROR_PREFIX_SERVICE}_001"
 FEATURE_FLAGS: Dict[str, bool] = {
     'ENABLE_FINBERT': True,            # Use FinBERT for sentiment analysis
     'ENABLE_BACKGROUND_COLLECTION': True,  # Background data collection
-    'ENABLE_EMAIL_ALERTS': False,     # Email notification system
+    'ENABLE_EMAIL_ALERTS': True,     # Email notification system
     'ENABLE_ENHANCED_LOGGING': True,  # Detailed logging
     'ENABLE_HEALTH_CHECKS': True,     # System health monitoring
     'ENABLE_PERFORMANCE_METRICS': False,  # Performance monitoring

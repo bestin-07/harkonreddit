@@ -106,7 +106,7 @@ class AIStockValidator:
             
             # Prepositions and conjunctions
             'ON', 'IN', 'AT', 'TO', 'OF', 'BY', 'OR', 'AS', 'IF', 'SO', 'UP', 'GO', 'NO',
-            'IS', 'IT', 'BE', 'WE', 'MY', 'ME', 'HE', 'US', 'DO', 'AN', 'AM', 'VS'
+            'IS', 'IT', 'BE', 'WE', 'MY', 'ME', 'HE', 'US', 'DO', 'AN', 'AM', 'VS', 'AI'
         }
         
         # Finance-specific organization indicators
@@ -142,10 +142,10 @@ class AIStockValidator:
         # Keep a small hardcoded list as fallback if JSON validation fails
         self.fallback_known_symbols = {
             'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'AMD', 'INTC',
-            'NFLX', 'DIS', 'BABA', 'TSM', 'V', 'JPM', 'JNJ', 'WMT', 'PG', 'UNH', 'HD',
-            'MA', 'BAC', 'XOM', 'ABBV', 'PFE', 'KO', 'AVGO', 'PEP', 'TMO', 'COST', 'NVS',
+            'NFLX','BABA', 'TSM', 'JPM', 'JNJ', 'WMT', 'PG', 'UNH',
+            'MA', 'BAC', 'XOM', 'ABBV', 'PFE', 'KO', 'AVGO', 'PEP', 'TMO', 'NVS',
             'CVX', 'ADBE', 'ABT', 'ACN', 'MRK', 'ORCL', 'CRM', 'LLY', 'TXN', 'QCOM',
-            'GME', 'AMC', 'BB', 'NOK', 'PLTR', 'NIO', 'LCID', 'RIVN', 'F', 'GM', 'COIN'
+            'GME', 'AMC', 'NOK', 'PLTR', 'NIO', 'LCID', 'RIVN'
         }
         
         self._initialize_model()

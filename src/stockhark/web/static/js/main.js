@@ -106,12 +106,6 @@ function createStockCard(stock) {
             <div class="stock-header">
                 <div class="stock-symbol">
                     <h3>$${stock.symbol}</h3>
-                    <div class="stock-badges">
-                        <span class="mentions-badge">
-                            <i class="fas fa-comment"></i>
-                            ${stock.mentions}
-                        </span>
-                    </div>
                 </div>
                 <div class="sentiment-indicator sentiment-${stock.overall_sentiment}">
                     <i class="fas fa-${sentimentIcon}"></i>
