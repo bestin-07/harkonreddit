@@ -72,8 +72,8 @@ MIN_POST_COUNT_WEIGHT = 1.0  # Minimum weight (single post)
 MAX_POST_COUNT_WEIGHT = 2.0  # Maximum weight cap
 
 # Minimum mention threshold - filters out stocks with insufficient discussion
-MIN_STOCK_MENTIONS = 3  # Minimum mentions required for a stock to be considered  
-MIN_UNIQUE_POSTS = 2    # Minimum unique posts required for a stock to be considered
+MIN_STOCK_MENTIONS = 1  # Minimum mentions required for a stock to be considered  
+MIN_UNIQUE_POSTS = 1    # Minimum unique posts required for a stock to be considered
 
 # FinBERT configuration
 FINBERT_MODEL_NAME = "ProsusAI/finbert"
