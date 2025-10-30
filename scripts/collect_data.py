@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
 
+# Check if running in bootstrap mode (lightweight for Railway deployment)
+BOOTSTRAP_MODE = os.getenv('STOCKHARK_BOOTSTRAP_MODE', 'false').lower() == 'true'
+
 # Setup script environment using centralized utility  
 src_dir = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_dir))
@@ -153,13 +156,20 @@ def collect_fresh_data(duration_minutes: int = 10, posts_per_subreddit: int = 15
                         print(f"   🎯 Post {i}: Found {len(valid_symbols)} stocks → {', '.join(valid_symbols)}")
                         print(f"      📰 '{post.title[:50]}...' ({post.score} ⬆️)")
                         
-                        # Get raw sentiment score (Step 1: FinBERT Analysis) 
-                        underlying_analyzer = sentiment_analyzer._analyzer
-                        raw_sentiment = underlying_analyzer.analyze_sentiment(
-                            full_text, 
-                            timestamp=None,  # We'll pass timestamp separately
-                            apply_time_decay=False  # We handle time decay in aggregation
-                        )
+                        # Get raw sentiment score (Step 1: FinBERT Analysis)
+                        if BOOTSTRAP_MODE:
+                            # Use lightweight rule-based analysis during bootstrap
+                            from stockhark.sentiment.rule_based_analyzer import RuleBasedAnalyzer
+                            rule_analyzer = RuleBasedAnalyzer()
+                            raw_sentiment = rule_analyzer.analyze_sentiment(full_text, timestamp=None, apply_time_decay=False)
+                        else:
+                            # Use full FinBERT analysis (normal mode)
+                            underlying_analyzer = sentiment_analyzer._analyzer
+                            raw_sentiment = underlying_analyzer.analyze_sentiment(
+                                full_text, 
+                                timestamp=None,  # We'll pass timestamp separately
+                                apply_time_decay=False  # We handle time decay in aggregation
+                            )
                         
                         # Create mentions for each symbol in this post (for aggregation)
                         post_timestamp = datetime.fromtimestamp(post.created_utc)
