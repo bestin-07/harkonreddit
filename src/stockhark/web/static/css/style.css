@@ -1,3 +1,90 @@
+/* --- GLOBAL RESPONSIVE ENHANCEMENTS --- */
+@media (max-width: 1024px) {
+    .container, .main-content, .footer-content {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .navbar-brand span {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container, .main-content, .footer-content {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+    }
+    .navbar, .nav-menu, .section-header, .footer-content {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+    .main-content {
+        min-height: unset;
+    }
+    .hero-title, .section-header h2 {
+        font-size: 1.3rem !important;
+    }
+    .hero-content, .cta-content {
+        padding: 0.5rem !important;
+    }
+    .subscribe-card, .stock-metrics, .criteria-grid, .feature-grid, .tech-details, .advantages-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .modal-content {
+        margin: 10% auto !important;
+        width: 98% !important;
+        max-width: 99vw !important;
+        padding: 1rem !important;
+    }
+    .calculation-table {
+        min-width: 600px;
+    }
+    .responsive-table-container {
+        margin: 0 -0.5rem;
+        padding: 0 0.5rem;
+    }
+    .footer {
+        padding: 1rem 0 !important;
+    }
+    .footer-links {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+    .flash-messages {
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        top: 60px !important;
+    }
+    .stock-details-header {
+        font-size: 1rem !important;
+    }
+    .empty-state {
+        padding: 2rem 0.5rem !important;
+    }
+    .email-preview, .tech-card, .feature-card, .advantage-item {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand span {
+        font-size: 0.95rem !important;
+    }
+    .modal-content {
+        padding: 0.5rem !important;
+    }
+    .hero-title, .section-header h2 {
+        font-size: 1rem !important;
+    }
+    .footer-content {
+        padding: 0.25rem !important;
+    }
+    .responsive-table-container {
+        margin: 0 -0.25rem;
+        padding: 0 0.25rem;
+    }
+}
 /* Modern, minimalistic CSS with excellent color theory */
 :root {
     /* Primary Colors - Based on modern design principles */
