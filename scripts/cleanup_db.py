@@ -3,26 +3,51 @@
 Database Cleanup Tool
 Remove invalid stock symbols and keep only real NASDAQ/AMEX stocks
 """
+import sys
+from pathlib import Path
+# Setup script environment using centralized utility  
+src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(src_dir))
+project_root = Path(__file__).parent.parent
 
 import sqlite3
-from fast_stock_validator import FastStockValidator
+from stockhark.core.validators.hybrid_validator import StockValidator
 
 def cleanup_database():
     """Clean the database by removing invalid stock symbols"""
     print("🧹 StockHark Database Cleanup")
     print("=" * 50)
-    
-    # Initialize fast validator
-    validator = FastStockValidator()
-    
+
+    # Connect to database
+    import os
+    db_path = os.environ.get('STOCKHARK_DB_PATH', 'stocks.db')
+    if not os.path.isabs(db_path):
+        db_path = os.path.abspath(db_path)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Setup validator
+    json_path = project_root / "src" / "data" / "json"
+    validator = StockValidator(json_folder_path=str(json_path), silent=True)
+
     if len(validator.all_symbols) == 0:
         print("❌ No symbols loaded from JSON files")
+        conn.close()
         return False
-    
-    # Connect to database
-    conn = sqlite3.connect('stocks.db')
-    cursor = conn.cursor()
-    
+
+    # List all tables in the database
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+    print("\nTables in database:", [t[0] for t in tables])
+
+    # Display all data for each table
+    for (table_name,) in tables:
+        print(f"\nData from table: {table_name}")
+        cursor.execute(f"SELECT * FROM {table_name}")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+
     # Get current database stats
     cursor.execute('SELECT COUNT(*) FROM stock_data')
     total_mentions = cursor.fetchone()[0]
@@ -147,11 +172,14 @@ def backup_database():
     import shutil
     from datetime import datetime
     
+    import os
+    db_path = os.environ.get('STOCKHARK_DB_PATH', 'stocks.db')
+    if not os.path.isabs(db_path):
+        db_path = os.path.abspath(db_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_name = f"stocks_backup_{timestamp}.db"
-    
     try:
-        shutil.copy2('stocks.db', backup_name)
+        shutil.copy2(db_path, backup_name)
         print(f"✅ Database backed up to: {backup_name}")
         return True
     except Exception as e:
