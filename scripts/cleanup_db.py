@@ -20,9 +20,11 @@ def cleanup_database():
 
     # Connect to database
     import os
-    db_path = os.environ.get('STOCKHARK_DB_PATH', 'stocks.db')
-    if not os.path.isabs(db_path):
-        db_path = os.path.abspath(db_path)
+    # Always use src/data/stocks.db
+    db_path = os.path.abspath(os.path.join(project_root, 'src', 'data', 'stocks.db'))
+    if not os.path.exists(db_path):
+        print(f"❌ Database file not found: {db_path}")
+        return False
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -37,27 +39,25 @@ def cleanup_database():
 
     # List all tables in the database
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    print("\nTables in database:", [t[0] for t in tables])
-
-    # Display all data for each table
-    for (table_name,) in tables:
-        print(f"\nData from table: {table_name}")
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
+    tables = [t[0] for t in cursor.fetchall()]
+    print("\nTables in database:", tables)
+    if 'stock_data' not in tables:
+        print("❌ Error: 'stock_data' table not found in database.")
+        conn.close()
+        return False
 
     # Get current database stats
     cursor.execute('SELECT COUNT(*) FROM stock_data')
     total_mentions = cursor.fetchone()[0]
-    
     cursor.execute('SELECT COUNT(DISTINCT symbol) FROM stock_data')
     unique_symbols = cursor.fetchone()[0]
-    
     print(f"📊 Current Database:")
     print(f"   Total mentions: {total_mentions:,}")
     print(f"   Unique symbols: {unique_symbols:,}")
+    if total_mentions == 0:
+        print("❌ No data in stock_data table.")
+        conn.close()
+        return False
     
     # Get all symbols and their counts
     cursor.execute('''
@@ -102,12 +102,20 @@ def cleanup_database():
     
     # Ask for confirmation
     print(f"\n⚠️  This will permanently delete {invalid_mentions:,} mentions ({len(invalid_symbols)} symbols)")
-    response = input("Continue with cleanup? (y/N): ").strip().lower()
-    
-    if response != 'y':
-        print("❌ Cleanup cancelled")
-        conn.close()
-        return False
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--auto', action='store_true', help='Auto-confirm cleanup (no prompt)')
+    args, _ = parser.parse_known_args()
+    auto_confirm = args.auto
+
+    if not auto_confirm:
+        response = input("Continue with cleanup? (y/N): ").strip().lower()
+        if response != 'y':
+            print("❌ Cleanup cancelled")
+            conn.close()
+            return False
+    else:
+        print("Auto-confirm enabled: proceeding with cleanup.")
     
     # Perform cleanup
     print(f"\n🧹 Cleaning database...")

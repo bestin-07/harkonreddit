@@ -127,6 +127,9 @@ class StockValidator:
             return "AMEX"
         else:
             return None
+
+    def is_valid_stock_symbol(self, symbol: str) -> bool:
+        return self.is_valid_symbol(symbol)
     
     def validate_symbols(self, symbols: List[str]) -> List[str]:
         """
