@@ -149,11 +149,8 @@ class HybridStockValidator:
         # Apply combination strategy
         final_symbols = self._apply_combination_strategy(symbols, sources, confidence_scores)
 
-        # FINAL FILTER: Only keep symbols that are valid according to StockValidator
-        filtered_final_symbols = [s for s in final_symbols if self.current_validator.is_valid_symbol(s)]
-
         return ValidationResult(
-            symbols=sorted(filtered_final_symbols),
+            symbols=sorted(list(final_symbols)),
             companies=sorted(list(companies)),
             confidence_scores=confidence_scores,
             sources=sources,
